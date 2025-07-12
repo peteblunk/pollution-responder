@@ -1,9 +1,26 @@
+
 export interface Character {
   name: string;
   rank: string;
   skill: number;
   preparedness: number;
   luck: number;
+}
+
+export interface CharacterCreationState {
+    qualification: 'qualified' | 'unqualified';
+    skillRoll: number;
+    hasMarineSafetyPin: boolean;
+    isMSTHonorGrad: boolean;
+    isOcsGrad: boolean;
+    readiness: 'allGreen' | 'notAllGreen';
+    preparednessRoll: number;
+    readinessMetricsNotGreen: number;
+    involuntaryDeployments: number;
+    lettersOfCommendation: number;
+    achievementMedals: number;
+    isRepoY: boolean;
+    hasChallengeCoin: boolean;
 }
 
 export interface ICS201 {
@@ -21,6 +38,7 @@ export interface ICS201 {
 
 export interface GameState {
   character: Character;
+  characterCreation: CharacterCreationState;
   ics201: ICS201;
   currentScenarioId: string;
   eventLog: string[];
@@ -32,9 +50,24 @@ export const initialState: GameState = {
   character: {
     name: "MST1 Responder",
     rank: "Marine Science Technician First Class",
-    skill: 50,
-    preparedness: 50,
-    luck: 50,
+    skill: 0,
+    preparedness: 0,
+    luck: 0,
+  },
+  characterCreation: {
+    qualification: 'unqualified',
+    skillRoll: 0,
+    hasMarineSafetyPin: false,
+    isMSTHonorGrad: false,
+    isOcsGrad: false,
+    readiness: 'allGreen',
+    preparednessRoll: 0,
+    readinessMetricsNotGreen: 0,
+    involuntaryDeployments: 0,
+    lettersOfCommendation: 0,
+    achievementMedals: 0,
+    isRepoY: false,
+    hasChallengeCoin: false,
   },
   ics201: {
     incidentName: "Diesel Spill at Pier 7",
