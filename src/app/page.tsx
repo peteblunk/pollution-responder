@@ -83,7 +83,7 @@ export default function LandingPage() {
       </main>
 
       <footer className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 text-center text-sm text-muted-foreground">
-        <p>A training tool concept. Not an official USCG product.</p>
+        <p>&copy; {new Date().getFullYear()} Team Two Productions. A training tool concept. Not an official USCG product.</p>
       </footer>
     </div>
   );

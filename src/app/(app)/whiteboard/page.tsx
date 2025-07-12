@@ -6,10 +6,10 @@ export default function WhiteboardPage() {
     <div className="h-full flex flex-col">
        <Card className="h-full flex flex-col">
         <CardHeader>
-            <CardTitle className="font-headline text-3xl">Collaborative Whiteboard</CardTitle>
-            <CardDescription>Visualize your strategy. Sketch hazard zones, vessel diagrams, or ACP components.</CardDescription>
+            <CardTitle className="font-headline text-3xl">Pre-Departure Checklist</CardTitle>
+            <CardDescription>Use the tools to create your checklist. You have 4 minutes.</CardDescription>
         </CardHeader>
-        <CardContent className="flex-grow">
+        <CardContent className="flex-grow min-h-0">
             <WhiteboardCanvas />
         </CardContent>
        </Card>

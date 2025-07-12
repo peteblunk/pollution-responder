@@ -36,12 +36,11 @@ export default function DashboardPage() {
             <div className="mt-6 p-4 border rounded-lg bg-muted/30">
                 <h4 className="font-headline text-lg flex items-center gap-2 mb-3"><ClipboardCheck/> Pre-Departure Checklist</h4>
                 <p className="text-sm mb-4">
-                    You take a moment to consider potential pre-departure hazards and plan your loadout. Use the whiteboard to make a checklist of everything you will need.
+                    You take a moment to consider potential pre-departure hazards and plan your loadout. Use the whiteboard to make a checklist of everything you will need. You will have four minutes.
                 </p>
                 <Button asChild>
                     <Link href="/whiteboard"><Edit3 className="mr-2"/> Open Whiteboard</Link>
                 </Button>
-                <p className="text-xs text-muted-foreground mt-2">Required Items: PPE, 4-gas meter, rad pager, warm clothing, sample kit, paperwork, water, ferry pass. Bonus for history checks and proactive calls.</p>
             </div>
           </CardContent>
         </Card>
