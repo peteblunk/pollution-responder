@@ -14,6 +14,7 @@ import Link from 'next/link';
 import { Textarea } from './ui/textarea';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from './ui/card';
 import { ScrollArea } from './ui/scroll-area';
+import { useGameState } from '@/hooks/use-game-state';
 
 const colors = [
   "#000000", // Black
@@ -30,14 +31,14 @@ const requiredItems = [
     { id: 'sample-kit', label: 'Sample Kit (checked)' },
     { id: 'paperwork', label: 'Paperwork (NOFI, forms, notebook, etc.)' },
     { id: 'other', label: 'Snack, water, ferry pass' },
+    { id: 'calls', label: 'Call Duty Sup / Contact' },
+    { id: 'jurisdiction', label: 'Confirm Jurisdiction / Consult ACP' },
 ]
 
 const bonusItems = [
     { id: 'sunscreen', label: 'Sun Screen' },
     { id: 'camera', label: 'Camera' },
     { id: 'misle', label: 'Look up MISLE History' },
-    { id: 'calls', label: 'Call Duty Sup / Contact' },
-    { id: 'jurisdiction', label: 'Confirm Jurisdiction / Consult ACP' },
 ]
 
 type AssessmentStep = 'honor' | 'checklist';
@@ -59,6 +60,7 @@ export function WhiteboardCanvas() {
   
   const [missedItems, setMissedItems] = useState<string[]>([]);
   const [assessmentStep, setAssessmentStep] = useState<AssessmentStep>('honor');
+  const { updateMissedChecklistItems } = useGameState();
   
   const drawTextFromArea = (andClose = true) => {
       const textarea = textareaRef.current;
@@ -206,6 +208,10 @@ export function WhiteboardCanvas() {
       setMissedItems(prev => checked ? [...prev, itemId] : prev.filter(id => id !== itemId));
   }
   
+  const handleReturnToDashboard = () => {
+    updateMissedChecklistItems(missedItems);
+  }
+
   const minutes = Math.floor(timeLeft / 60);
   const seconds = timeLeft % 60;
 
@@ -307,6 +313,11 @@ export function WhiteboardCanvas() {
                            <CardContent className="flex-grow overflow-hidden">
                                <ScrollArea className="h-full pr-4">
                                     <div className="space-y-4">
+                                        <div className='p-2 rounded-md bg-muted/50 text-center mb-4'>
+                                            <p className='text-muted-foreground'>
+                                                <strong className='text-uscg-red font-bold'>Honor</strong>, Respect, Devotion to Duty
+                                            </p>
+                                        </div>
                                         <h4 className="font-bold mb-2">Required Items & Actions</h4>
                                         <div className="space-y-2">
                                         {requiredItems.map(item => (
@@ -330,7 +341,7 @@ export function WhiteboardCanvas() {
                                </ScrollArea>
                            </CardContent>
                            <CardFooter className='pt-4 border-t'>
-                               <Button className="w-full" asChild>
+                               <Button className="w-full" asChild onClick={handleReturnToDashboard}>
                                    <Link href="/dashboard">Return to Dashboard ({missedItems.length} missed)</Link>
                                </Button>
                            </CardFooter>

@@ -1,3 +1,4 @@
+
 "use client";
 
 import { Button } from "@/components/ui/button";
@@ -5,12 +6,19 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { useGameState } from "@/hooks/use-game-state";
 import { DiceRoller } from "@/components/dice-roller";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { FileText, LifeBuoy, Ship, User, Wind, ClipboardCheck, Phone, CheckSquare, Edit3 } from "lucide-react";
+import { FileText, LifeBuoy, Ship, User, Wind, ClipboardCheck, Phone, CheckSquare, Edit3, ShieldAlert, ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { Progress } from "@/components/ui/progress";
+import { Separator } from "@/components/ui/separator";
+
+const requiredItemsIds = ['ppe', 'equipment', 'clothing', 'sample-kit', 'paperwork', 'other', 'calls', 'jurisdiction'];
 
 export default function DashboardPage() {
   const { state, eventLog, logEvent } = useGameState();
+
+  const missedRequiredItemsCount = state.missedChecklistItems.filter(id => requiredItemsIds.includes(id)).length;
+  const preparednessPenalty = missedRequiredItemsCount;
+  const finalPreparedness = state.character.preparedness - preparednessPenalty;
 
   return (
     <div className="grid gap-6 lg:grid-cols-3">
@@ -105,13 +113,27 @@ export default function DashboardPage() {
               <Progress value={state.character.skill * 10} max={100} className="h-2"/>
             </div>
             <div>
-              <label className="text-sm font-medium">Preparedness: {state.character.preparedness}</label>
-              <Progress value={state.character.preparedness * 10} max={100} className="h-2"/>
+              <div className="flex justify-between items-center">
+                <label className="text-sm font-medium">Preparedness: {finalPreparedness}</label>
+                {preparednessPenalty > 0 && (
+                  <span className="text-sm font-bold text-destructive">(-{preparednessPenalty})</span>
+                )}
+              </div>
+              <Progress value={finalPreparedness * 10} max={100} className="h-2"/>
             </div>
             <div>
               <label className="text-sm font-medium">Luck: {state.character.luck}</label>
               <Progress value={state.character.luck * 10} max={100} className="h-2"/>
             </div>
+            {preparednessPenalty > 0 && (
+              <Alert variant="destructive" className="border-destructive/50 text-destructive">
+                <ShieldAlert className="h-4 w-4" />
+                <AlertTitle>Preparedness Penalty!</AlertTitle>
+                <AlertDescription className="text-destructive/90">
+                  You missed {missedRequiredItemsCount} required item(s) on your checklist, resulting in a -{preparednessPenalty} penalty to your Preparedness for this phase.
+                </AlertDescription>
+              </Alert>
+            )}
              <Button asChild variant="outline" className="w-full">
                 <Link href="/character">View Full Sheet</Link>
              </Button>

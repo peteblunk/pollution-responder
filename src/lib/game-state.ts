@@ -42,6 +42,7 @@ export interface GameState {
   ics201: ICS201;
   currentScenarioId: string;
   eventLog: string[];
+  missedChecklistItems: string[];
 }
 
 const today = new Date();
@@ -83,4 +84,5 @@ export const initialState: GameState = {
   },
   currentScenarioId: "start",
   eventLog: ["08:02 - Game started. Initial scenario loaded."],
+  missedChecklistItems: [],
 };

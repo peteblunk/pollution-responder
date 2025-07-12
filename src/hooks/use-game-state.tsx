@@ -10,7 +10,8 @@ type GameStateAction =
   | { type: 'UPDATE_CHARACTER'; payload: Character }
   | { type: 'UPDATE_ICS201'; payload: ICS201 }
   | { type: 'LOG_EVENT'; payload: string }
-  | { type: 'UPDATE_CHARACTER_CREATION'; payload: CharacterCreationState };
+  | { type: 'UPDATE_CHARACTER_CREATION'; payload: CharacterCreationState }
+  | { type: 'UPDATE_MISSED_CHECKLIST_ITEMS'; payload: string[] };
 
 const GameStateContext = createContext<{
   state: GameState;
@@ -20,6 +21,7 @@ const GameStateContext = createContext<{
   updateICS201: (ics201: ICS201) => void;
   logEvent: (event: string) => void;
   updateCharacterCreationState: (creationState: CharacterCreationState) => void;
+  updateMissedChecklistItems: (items: string[]) => void;
 } | undefined>(undefined);
 
 const gameStateReducer = (state: GameState, action: GameStateAction): GameState => {
@@ -34,6 +36,8 @@ const gameStateReducer = (state: GameState, action: GameStateAction): GameState 
         return { ...state, eventLog: [...state.eventLog, `${new Date().toLocaleTimeString()}: ${action.payload}`]};
     case 'UPDATE_CHARACTER_CREATION':
         return { ...state, characterCreation: action.payload };
+    case 'UPDATE_MISSED_CHECKLIST_ITEMS':
+        return { ...state, missedChecklistItems: action.payload };
     default:
       return state;
   }
@@ -78,8 +82,12 @@ export const GameStateProvider = ({ children }: { children: ReactNode }) => {
   const logEvent = useCallback((event: string) => {
       dispatch({ type: 'LOG_EVENT', payload: event });
   }, []);
+
+  const updateMissedChecklistItems = useCallback((items: string[]) => {
+      dispatch({ type: 'UPDATE_MISSED_CHECKLIST_ITEMS', payload: items });
+  }, []);
   
-  const value = { state, dispatch, eventLog: state.eventLog, updateCharacter, updateICS201, logEvent, updateCharacterCreationState };
+  const value = { state, dispatch, eventLog: state.eventLog, updateCharacter, updateICS201, logEvent, updateCharacterCreationState, updateMissedChecklistItems };
 
   return (
     <GameStateContext.Provider value={value}>
