@@ -53,6 +53,7 @@ export function WhiteboardCanvas() {
   const [timerActive, setTimerActive] = useState(true);
 
   const [isTyping, setIsTyping] = useState(false);
+  const [textYOffset, setTextYOffset] = useState(40);
   
   const [missedItems, setMissedItems] = useState<string[]>([]);
   
@@ -69,9 +70,12 @@ export function WhiteboardCanvas() {
       contextRef.current.fillStyle = color;
       contextRef.current.font = '16px "PT Sans"';
       const lines = textarea.value.split('\n');
-      lines.forEach((line, index) => {
-        contextRef.current?.fillText(line, 20, 40 + (index * 20));
+      let currentY = textYOffset;
+      lines.forEach((line) => {
+        contextRef.current?.fillText(line, 20, currentY);
+        currentY += 20; // Move to the next line
       });
+      setTextYOffset(currentY + 20); // Add extra space for the next text block
       
       textarea.value = '';
 
@@ -140,6 +144,9 @@ export function WhiteboardCanvas() {
         setIsTyping(true);
         setTimeout(() => textareaRef.current?.focus(), 0);
       } else {
+        if(isTyping && textareaRef.current?.value){
+            drawTextFromArea(false);
+        }
         setIsTyping(false);
       }
       if (newTool === 'pencil') {
@@ -177,6 +184,7 @@ export function WhiteboardCanvas() {
       const context = contextRef.current;
       if (canvas && context) {
           context.clearRect(0, 0, canvas.width, canvas.height);
+          setTextYOffset(40); // Reset text position
       }
   }
 
