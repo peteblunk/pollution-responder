@@ -5,47 +5,74 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { useGameState } from "@/hooks/use-game-state";
 import { DiceRoller } from "@/components/dice-roller";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { FileText, LifeBuoy, Ship, User, Wind } from "lucide-react";
+import { FileText, LifeBuoy, Ship, User, Wind, ClipboardCheck, Phone, CheckSquare, Edit3 } from "lucide-react";
 import Link from "next/link";
 import { Progress } from "@/components/ui/progress";
 
 export default function DashboardPage() {
-  const { state, eventLog } = useGameState();
+  const { state, eventLog, logEvent } = useGameState();
 
   return (
     <div className="grid gap-6 lg:grid-cols-3">
       <div className="lg:col-span-2 space-y-6">
         <Card>
           <CardHeader>
-            <CardTitle className="font-headline text-2xl">Current Scenario: The Spill at Pier 7</CardTitle>
+            <CardTitle className="font-headline text-2xl">Phase 0: Office Briefing & Departure Prep</CardTitle>
             <CardDescription>
-              08:00 - A report comes in of a significant diesel spill from the M/V Coastal Navigator during bunkering operations.
+              1000 Hours - The call just came in: 'Potential diesel fuel leak from a vessel moored at Pier 3 at a Marina in Smuggler’s Cove on the Kitsap Peninsula.'
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Alert>
               <Wind className="h-4 w-4" />
-              <AlertTitle>Weather Conditions</AlertTitle>
+              <AlertTitle>Initial Report</AlertTitle>
               <AlertDescription>
-                Clear skies, wind 15 knots from NW, 1-2 ft seas. Tide is outgoing.
+                You're the first responders. The Command Center is waiting for your initial report.
               </AlertDescription>
             </Alert>
             <p className="mt-4 text-base">
-              You are the first responder on scene. The vessel's crew has deployed a small boom, but it's clearly insufficient. The air is thick with fumes, and a growing rainbow sheen is spreading rapidly towards a sensitive marshland.
+              Before you even step out the door, you need to be prepared. What's your quick checklist of things you need to confirm or do before you leave the office?
             </p>
-            <p className="mt-2 text-base font-bold">What is your first action?</p>
+            <div className="mt-6 p-4 border rounded-lg bg-muted/30">
+                <h4 className="font-headline text-lg flex items-center gap-2 mb-3"><ClipboardCheck/> Pre-Departure Checklist</h4>
+                <p className="text-sm mb-4">
+                    You take a moment to consider potential pre-departure hazards and plan your loadout. Use the whiteboard to make a checklist of everything you will need.
+                </p>
+                <Button asChild>
+                    <Link href="/whiteboard"><Edit3 className="mr-2"/> Open Whiteboard</Link>
+                </Button>
+                <p className="text-xs text-muted-foreground mt-2">Required Items: PPE, 4-gas meter, rad pager, warm clothing, sample kit, paperwork, water, ferry pass. Bonus for history checks and proactive calls.</p>
+            </div>
           </CardContent>
-          <CardFooter className="gap-4">
-            <DiceRoller onRoll={(result) => console.log('Action roll:', result)}>
-              Establish Command Post
-            </DiceRoller>
-            <DiceRoller onRoll={(result) => console.log('Action roll:', result)}>
-              Assess Spill Size
-            </DiceRoller>
-            <Button variant="destructive">
-              Order Evacuation
-            </Button>
-          </CardFooter>
+        </Card>
+
+        <Card>
+            <CardHeader>
+                <CardTitle className="font-headline">Pre-Departure Actions & Rolls</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+                <div className="flex flex-wrap items-center justify-between gap-4 p-3 border rounded-lg">
+                    <div>
+                        <h4 className="font-medium flex items-center gap-2"><Phone/>Duty Sup Check-in</h4>
+                        <p className="text-sm text-muted-foreground">Report your departure and initial intentions.</p>
+                    </div>
+                    <Button onClick={() => logEvent("Successfully checked in with Duty Supervisor.")}>Check In</Button>
+                </div>
+                 <div className="flex flex-wrap items-center justify-between gap-4 p-3 border rounded-lg">
+                    <div>
+                        <h4 className="font-medium flex items-center gap-2"><CheckSquare/>Sample Kit Check</h4>
+                        <p className="text-sm text-muted-foreground">Confirm your sample kit is fully stocked.</p>
+                    </div>
+                    <DiceRoller sides={12} onRoll={(roll) => logEvent(`Rolled a ${roll} on Sample Kit check (2d6, using d12 for simplicity).`)}>Roll Preparedness</DiceRoller>
+                </div>
+                 <div className="flex flex-wrap items-center justify-between gap-4 p-3 border rounded-lg">
+                    <div>
+                        <h4 className="font-medium flex items-center gap-2"><Ship/>Drive to Ferry</h4>
+                        <p className="text-sm text-muted-foreground">Time to head out. Let's hope you don't forget anything.</p>
+                    </div>
+                    <DiceRoller sides={12} onRoll={(roll) => logEvent(`Rolled a ${roll} for departure (Luck/Preparedness).`)}>Roll for Departure</DiceRoller>
+                </div>
+            </CardContent>
         </Card>
         
         <Card>
@@ -58,7 +85,7 @@ export default function DashboardPage() {
                     {eventLog.length === 0 ? (
                         <p className="text-sm text-muted-foreground">No events yet. Make your first move!</p>
                     ) : (
-                        eventLog.map((log, index) => (
+                        [...eventLog].reverse().map((log, index) => (
                             <div key={index} className="text-sm">{log}</div>
                         ))
                     )}
@@ -75,16 +102,16 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <label className="text-sm font-medium">Skill</label>
-              <Progress value={state.character.skill} className="h-2"/>
+              <label className="text-sm font-medium">Skill: {state.character.skill}</label>
+              <Progress value={state.character.skill * 10} max={100} className="h-2"/>
             </div>
             <div>
-              <label className="text-sm font-medium">Preparedness</label>
-              <Progress value={state.character.preparedness} className="h-2"/>
+              <label className="text-sm font-medium">Preparedness: {state.character.preparedness}</label>
+              <Progress value={state.character.preparedness * 10} max={100} className="h-2"/>
             </div>
             <div>
-              <label className="text-sm font-medium">Luck</label>
-              <Progress value={state.character.luck} className="h-2"/>
+              <label className="text-sm font-medium">Luck: {state.character.luck}</label>
+              <Progress value={state.character.luck * 10} max={100} className="h-2"/>
             </div>
              <Button asChild variant="outline" className="w-full">
                 <Link href="/character">View Full Sheet</Link>

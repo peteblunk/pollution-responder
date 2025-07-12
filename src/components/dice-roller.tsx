@@ -28,7 +28,7 @@ export function DiceRoller({ children, onRoll, sides = 20, className, ...props }
   return (
     <div className="flex items-center gap-4">
       <Button onClick={handleRoll} disabled={isRolling} className={cn("gap-2", className)} {...props}>
-        <Dices className={cn(isRolling && "animate-spin")} />
+        <Dices className={cn("w-4 h-4", isRolling && "animate-spin")} />
         {children}
       </Button>
       {result !== null && (
