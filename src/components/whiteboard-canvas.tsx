@@ -86,11 +86,13 @@ export function WhiteboardCanvas() {
   }
 
   const endSession = () => {
-    if (timerActive && isTyping && textareaRef.current?.value) {
-        drawTextFromArea(false);
+    if (timerActive) {
+      if (isTyping && textareaRef.current?.value) {
+          drawTextFromArea(false);
+      }
+      setTimerActive(false);
+      setIsTyping(false);
     }
-    setTimerActive(false);
-    setIsTyping(false);
   };
 
   useEffect(() => {
@@ -281,6 +283,14 @@ export function WhiteboardCanvas() {
                    <CardContent className="flex-grow overflow-hidden">
                        <ScrollArea className="h-full pr-4">
                             <div className="space-y-4">
+                                <Alert variant="destructive" className="border-uscg-red text-uscg-red">
+                                    <AlertTitle className="font-headline text-base">
+                                        <strong className="font-bold text-uscg-red">Honor</strong>, Respect, Devotion to Duty
+                                    </AlertTitle>
+                                    <AlertDescription className="text-uscg-red/80">
+                                        The effectiveness of this training relies on your honest self-assessment. Be truthful about what you missed.
+                                    </AlertDescription>
+                                </Alert>
                                <div>
                                     <h4 className="font-bold mb-2">Required Items & Actions</h4>
                                     <div className="space-y-2">
@@ -308,12 +318,6 @@ export function WhiteboardCanvas() {
                        </ScrollArea>
                    </CardContent>
                    <CardFooter className='flex flex-col gap-4 pt-4 border-t'>
-                        <Alert variant="destructive">
-                           <AlertTitle className="font-headline">Honor, Respect, Devotion to Duty</AlertTitle>
-                           <AlertDescription>
-                               The effectiveness of this training relies on your honest self-assessment. Be truthful about what you missed.
-                           </AlertDescription>
-                       </Alert>
                        <Button className="w-full" asChild>
                            <Link href="/dashboard">Return to Dashboard ({missedItems.length} missed)</Link>
                        </Button>
