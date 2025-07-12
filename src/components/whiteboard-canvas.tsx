@@ -40,6 +40,8 @@ const bonusItems = [
     { id: 'jurisdiction', label: 'Confirm Jurisdiction / Consult ACP' },
 ]
 
+type AssessmentStep = 'honor' | 'checklist';
+
 export function WhiteboardCanvas() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -56,6 +58,7 @@ export function WhiteboardCanvas() {
   const [textYOffset, setTextYOffset] = useState(40);
   
   const [missedItems, setMissedItems] = useState<string[]>([]);
+  const [assessmentStep, setAssessmentStep] = useState<AssessmentStep>('honor');
   
   const drawTextFromArea = (andClose = true) => {
       const textarea = textareaRef.current;
@@ -99,11 +102,11 @@ export function WhiteboardCanvas() {
     const canvas = canvasRef.current;
     if (!canvas) return;
     
-    const context = canvas.getContext('2d');
-    if (!context) return;
-    
-    // Set canvas size based on parent, not fixed values
-    const setCanvasDimensions = () => {
+    // Check if context already exists to prevent resetting
+    if (!contextRef.current) {
+        const context = canvas.getContext('2d');
+        if (!context) return;
+        
         const dpr = window.devicePixelRatio || 1;
         const rect = canvas.parentElement!.getBoundingClientRect();
         canvas.width = rect.width * dpr;
@@ -115,12 +118,8 @@ export function WhiteboardCanvas() {
         context.lineWidth = lineWidth;
         context.font = '16px "PT Sans"';
         contextRef.current = context;
-        // Redraw content if needed, but for now we clear
     }
     
-    setCanvasDimensions();
-    // Maybe handle resize later if needed
-
     // Timer logic
     if (timerActive) {
         const timer = setInterval(() => {
@@ -275,56 +274,73 @@ export function WhiteboardCanvas() {
             )}
             
             {!timerActive && (
-               <Card className="w-full shadow-lg flex flex-col h-full max-h-[calc(100vh-200px)]">
-                   <CardHeader>
-                       <CardTitle className="font-headline text-2xl flex items-center gap-2"><ShieldQuestion/> Self-Assessment</CardTitle>
-                       <CardDescription>Review your list. For each item or action you missed, check the box.</CardDescription>
-                   </CardHeader>
-                   <CardContent className="flex-grow overflow-hidden">
-                       <ScrollArea className="h-full pr-4">
-                            <div className="space-y-4">
-                                <Alert variant="destructive" className="border-uscg-red text-uscg-red">
-                                    <AlertTitle className="font-headline text-base">
-                                        <strong className="font-bold text-uscg-red">Honor</strong>, Respect, Devotion to Duty
-                                    </AlertTitle>
-                                    <AlertDescription className="text-uscg-red/80">
-                                        The effectiveness of this training relies on your honest self-assessment. Be truthful about what you missed.
-                                    </AlertDescription>
-                                </Alert>
-                               <div>
-                                    <h4 className="font-bold mb-2">Required Items & Actions</h4>
-                                    <div className="space-y-2">
-                                    {requiredItems.map(item => (
-                                        <div key={item.id} className="flex items-center space-x-2">
-                                            <Checkbox id={item.id} onCheckedChange={(checked) => onMissedItemChange(item.id, !!checked)} />
-                                            <Label htmlFor={item.id} className="font-normal text-sm">{item.label}</Label>
+               <div className="w-full shadow-lg flex flex-col h-full max-h-[calc(100vh-200px)]">
+                   {assessmentStep === 'honor' && (
+                       <Card className="m-auto">
+                           <CardHeader>
+                               <CardTitle className="font-headline text-2xl text-center">Time's Up!</CardTitle>
+                           </CardHeader>
+                           <CardContent>
+                               <Alert variant="destructive" className="border-uscg-red text-uscg-red">
+                                   <AlertTitle className="font-headline text-lg">
+                                       <strong className="font-bold text-uscg-red">Honor</strong>, Respect, Devotion to Duty
+                                   </AlertTitle>
+                                   <AlertDescription className="text-uscg-red/80">
+                                       The effectiveness of this training relies on your honest self-assessment. Be truthful about what you missed as we review your list.
+                                   </AlertDescription>
+                               </Alert>
+                           </CardContent>
+                           <CardFooter>
+                               <Button className="w-full" onClick={() => setAssessmentStep('checklist')}>
+                                   Let's Check
+                               </Button>
+                           </CardFooter>
+                       </Card>
+                   )}
+
+                   {assessmentStep === 'checklist' && (
+                       <Card className="flex flex-col h-full">
+                           <CardHeader>
+                               <CardTitle className="font-headline text-2xl flex items-center gap-2"><ShieldQuestion/> Self-Assessment</CardTitle>
+                               <CardDescription>Review your list. For each item or action you missed, check the box.</CardDescription>
+                           </CardHeader>
+                           <CardContent className="flex-grow overflow-hidden">
+                               <ScrollArea className="h-full pr-4">
+                                    <div className="space-y-4">
+                                        <h4 className="font-bold mb-2">Required Items & Actions</h4>
+                                        <div className="space-y-2">
+                                        {requiredItems.map(item => (
+                                            <div key={item.id} className="flex items-center space-x-2">
+                                                <Checkbox id={item.id} onCheckedChange={(checked) => onMissedItemChange(item.id, !!checked)} />
+                                                <Label htmlFor={item.id} className="font-normal text-sm">{item.label}</Label>
+                                            </div>
+                                        ))}
                                         </div>
-                                    ))}
-                                    </div>
-                               </div>
-                               <Separator />
-                               <div>
-                                    <h4 className="font-bold mb-2">Bonus Items & Actions</h4>
-                                    <div className="space-y-2">
-                                    {bonusItems.map(item => (
-                                        <div key={item.id} className="flex items-center space-x-2">
-                                            <Checkbox id={item.id} onCheckedChange={(checked) => onMissedItemChange(item.id, !!checked)} />
-                                            <Label htmlFor={item.id} className="font-normal text-sm">{item.label}</Label>
+                                        <Separator />
+                                        <h4 className="font-bold mb-2">Bonus Items & Actions</h4>
+                                        <div className="space-y-2">
+                                        {bonusItems.map(item => (
+                                            <div key={item.id} className="flex items-center space-x-2">
+                                                <Checkbox id={item.id} onCheckedChange={(checked) => onMissedItemChange(item.id, !!checked)} />
+                                                <Label htmlFor={item.id} className="font-normal text-sm">{item.label}</Label>
+                                            </div>
+                                        ))}
                                         </div>
-                                    ))}
                                     </div>
-                               </div>
-                           </div>
-                       </ScrollArea>
-                   </CardContent>
-                   <CardFooter className='flex flex-col gap-4 pt-4 border-t'>
-                       <Button className="w-full" asChild>
-                           <Link href="/dashboard">Return to Dashboard ({missedItems.length} missed)</Link>
-                       </Button>
-                   </CardFooter>
-               </Card>
+                               </ScrollArea>
+                           </CardContent>
+                           <CardFooter className='pt-4 border-t'>
+                               <Button className="w-full" asChild>
+                                   <Link href="/dashboard">Return to Dashboard ({missedItems.length} missed)</Link>
+                               </Button>
+                           </CardFooter>
+                       </Card>
+                   )}
+               </div>
             )}
         </div>
     </div>
   );
 }
+
+    
