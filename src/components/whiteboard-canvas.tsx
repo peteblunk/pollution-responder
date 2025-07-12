@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useRef, useEffect, useState, useMemo } from 'react';
@@ -10,6 +11,8 @@ import { Label } from './ui/label';
 import { Separator } from './ui/separator';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import Link from 'next/link';
+import { Textarea } from './ui/textarea';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from './ui/card';
 
 const colors = [
   "#000000", // Black
@@ -38,7 +41,7 @@ const bonusItems = [
 
 export function WhiteboardCanvas() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const textInputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const contextRef = useRef<CanvasRenderingContext2D | null>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [color, setColor] = useState('#000000');
@@ -48,7 +51,7 @@ export function WhiteboardCanvas() {
   const [timeLeft, setTimeLeft] = useState(240); // 4 minutes
   const [timerActive, setTimerActive] = useState(true);
 
-  const [textInput, setTextInput] = useState({ visible: false, x: 0, y: 0, value: ''});
+  const [isTyping, setIsTyping] = useState(false);
   
   const [missedItems, setMissedItems] = useState<string[]>([]);
 
@@ -77,6 +80,7 @@ export function WhiteboardCanvas() {
             if (prev <= 1) {
                 clearInterval(timer);
                 setTimerActive(false);
+                setIsTyping(false); // Hide textarea when timer stops
                 return 0;
             }
             return prev - 1;
@@ -99,18 +103,25 @@ export function WhiteboardCanvas() {
       }
   }, [color, lineWidth, tool]);
 
-  const startDrawing = (event: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!timerActive) return;
-    const { offsetX, offsetY } = event.nativeEvent;
-    if (tool === 'text') {
-        if (textInput.value) { // place existing text
-            drawText();
-        }
-        setTextInput({ visible: true, x: offsetX, y: offsetY, value: ''});
-        setTimeout(() => textInputRef.current?.focus(), 0);
-        return;
-    }
+  const handleToolChange = (newTool: 'pencil' | 'eraser' | 'text') => {
+      if (!timerActive) return;
+      setTool(newTool);
+      if (newTool === 'text') {
+        setIsTyping(true);
+        setTimeout(() => textareaRef.current?.focus(), 0);
+      } else {
+        setIsTyping(false);
+      }
+      if (newTool === 'pencil') {
+        setLineWidth(3);
+        setColor("#000000");
+      }
+  }
 
+  const startDrawing = (event: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!timerActive || tool === 'text' || isTyping) return;
+    const { offsetX, offsetY } = event.nativeEvent;
+    
     if (!contextRef.current) return;
     contextRef.current.beginPath();
     contextRef.current.moveTo(offsetX, offsetY);
@@ -131,21 +142,26 @@ export function WhiteboardCanvas() {
     contextRef.current.stroke();
   };
   
-  const handleTextKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-      if (e.key === 'Enter') {
-          drawText();
-      } else if (e.key === 'Escape') {
-          setTextInput({ ...textInput, visible: false, value: '' });
-      }
-  }
-
-  const drawText = () => {
-      if (!contextRef.current || !textInput.value) return;
+  const drawTextFromArea = () => {
+      const textarea = textareaRef.current;
+      if (!contextRef.current || !textarea || !textarea.value) {
+          setIsTyping(false);
+          setTool('pencil');
+          return;
+      };
+      
       contextRef.current.fillStyle = color;
       contextRef.current.font = '16px "PT Sans"';
-      contextRef.current.fillText(textInput.value, textInput.x, textInput.y);
-      setTextInput({ visible: false, x: 0, y: 0, value: '' });
+      const lines = textarea.value.split('\n');
+      lines.forEach((line, index) => {
+        contextRef.current?.fillText(line, 20, 40 + (index * 20));
+      });
+      
+      textarea.value = '';
+      setIsTyping(false);
+      setTool('pencil');
   }
+
 
   const clearCanvas = () => {
       const canvas = canvasRef.current;
@@ -165,13 +181,13 @@ export function WhiteboardCanvas() {
   return (
     <div className='h-full w-full flex flex-col gap-2'>
         <div className="flex items-center gap-2 p-2 rounded-md border bg-card">
-            <Button variant={tool === 'pencil' ? "secondary" : "ghost"} size="icon" onClick={() => { setTool('pencil'); setLineWidth(3); setColor("#000000"); }} disabled={!timerActive}>
+            <Button variant={tool === 'pencil' ? "secondary" : "ghost"} size="icon" onClick={() => handleToolChange('pencil')} disabled={!timerActive}>
                 <Pencil />
             </Button>
-            <Button variant={tool === 'text' ? "secondary" : "ghost"} size="icon" onClick={() => setTool('text')} disabled={!timerActive}>
+            <Button variant={tool === 'text' ? "secondary" : "ghost"} size="icon" onClick={() => handleToolChange('text')} disabled={!timerActive}>
                 <CaseUpper />
             </Button>
-            <Button variant={tool === 'eraser' ? "secondary" : "ghost"} size="icon" onClick={() => setTool('eraser')} disabled={!timerActive}>
+            <Button variant={tool === 'eraser' ? "secondary" : "ghost"} size="icon" onClick={() => handleToolChange('eraser')} disabled={!timerActive}>
                 <Eraser />
             </Button>
              <Popover>
@@ -208,27 +224,22 @@ export function WhiteboardCanvas() {
                 onMouseUp={finishDrawing}
                 onMouseMove={draw}
                 onMouseLeave={finishDrawing}
-                className={cn("w-full h-full bg-white", !timerActive && 'opacity-30 ')}
+                className={cn("w-full h-full bg-white absolute inset-0", !timerActive && 'opacity-30 ')}
             />
-            {textInput.visible && (
-                <input
-                    ref={textInputRef}
-                    type="text"
-                    value={textInput.value}
-                    onChange={(e) => setTextInput({ ...textInput, value: e.target.value })}
-                    onKeyDown={handleTextKeyDown}
-                    onBlur={drawText}
-                    style={{
-                        position: 'absolute',
-                        left: `${textInput.x}px`,
-                        top: `${textInput.y - 20}px`,
-                        background: 'transparent',
-                        border: '1px solid #ccc',
-                        color: color,
-                        fontSize: '16px',
-                        fontFamily: '"PT Sans"',
-                    }}
-                />
+            {isTyping && timerActive && (
+                <div className="absolute inset-2 flex flex-col gap-2 bg-background/90 p-4 rounded-lg border">
+                    <Label htmlFor="text-input" className='font-headline'>Enter your checklist text below. Click "Add Text to Whiteboard" when finished.</Label>
+                    <Textarea 
+                        ref={textareaRef}
+                        id="text-input"
+                        className="flex-grow bg-white/80"
+                        placeholder='- PPE (gloves, hard hat...)'
+                    />
+                    <div className='flex justify-end gap-2'>
+                        <Button variant="ghost" onClick={() => { setIsTyping(false); setTool('pencil');}}>Cancel</Button>
+                        <Button onClick={drawTextFromArea}>Add Text to Whiteboard</Button>
+                    </div>
+                </div>
             )}
              {!timerActive && (
                 <div className="absolute inset-0 flex items-center justify-center p-4 bg-background/80">
