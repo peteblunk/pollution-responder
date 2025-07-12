@@ -5,6 +5,7 @@ export interface Character {
   skill: number;
   preparedness: number;
   luck: number;
+  unitName?: string;
 }
 
 export interface CharacterCreationState {

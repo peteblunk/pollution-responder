@@ -14,8 +14,9 @@ import {
   SidebarContent,
   SidebarFooter,
 } from "@/components/ui/sidebar";
+import { useGameState } from "@/hooks/use-game-state";
 import { Button } from "@/components/ui/button";
-import { Logo, USCGEagle } from "@/components/icons";
+import { Logo, CgMotorLifeBoat } from "@/components/icons";
 import { Home, User, FileText, Edit3, Ship, LifeBuoy, LogOut } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
@@ -24,10 +25,12 @@ const navItems = [
   { href: "/character", icon: User, label: "Character Sheet" },
   { href: "/ics-201", icon: FileText, label: "ICS-201 Form" },
   { href: "/whiteboard", icon: Edit3, label: "Whiteboard" },
+  { href: "/about", icon: LifeBuoy, label: "About" },
 ];
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const { state: { character } } = useGameState();
 
   return (
     <SidebarProvider>
@@ -79,11 +82,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <SidebarTrigger className="md:hidden" />
             <div className="flex-1">
               <h1 className="text-xl font-semibold font-headline">
-                {navItems.find(item => item.href === pathname)?.label || 'Dashboard'}
+                {character.unitName ? `${character.unitName} Pollution Response Exercise` : navItems.find(item => item.href === pathname)?.label || 'Dashboard'}
               </h1>
             </div>
             <div className="flex items-center gap-4">
-              <USCGEagle className="w-10 h-10 text-uscg-blue" />
+              <CgMotorLifeBoat className="w-10 h-10 text-uscg-blue" />
               <span className="font-bold text-uscg-red hidden sm:inline">U.S. COAST GUARD</span>
             </div>
           </header>

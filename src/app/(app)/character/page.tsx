@@ -20,6 +20,7 @@ export default function CharacterPage() {
   const { state, updateCharacter, updateCharacterCreationState } = useGameState();
   const [character, setCharacter] = useState<Character>(state.character);
   const [creationState, setCreationState] = useState<CharacterCreationState>(state.characterCreation);
+  const [unitName, setUnitName] = useState(state.character.unitName || '');
   
   const { toast } = useToast();
 
@@ -71,6 +72,7 @@ export default function CharacterPage() {
   const handleSave = () => {
     const finalCharacter: Character = {
       name: character.name,
+      unitName: unitName,
       rank: character.rank,
       skill,
       preparedness,
@@ -99,9 +101,13 @@ export default function CharacterPage() {
                     <Label htmlFor="name">Name</Label>
                     <Input id="name" value={character.name} onChange={(e) => setCharacter(c => ({...c, name: e.target.value}))} />
                 </div>
-                 <div className="space-y-2">
+                <div className="space-y-2">
                     <Label htmlFor="rank">Designation / Rank</Label>
                     <Input id="rank" value={character.rank} onChange={(e) => setCharacter(c => ({...c, rank: e.target.value}))} />
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="unitName">Unit Name</Label>
+                    <Input id="unitName" value={unitName} onChange={(e) => setUnitName(e.target.value)} />
                 </div>
             </div>
 

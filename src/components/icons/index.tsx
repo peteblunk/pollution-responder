@@ -38,3 +38,15 @@ export function USCGEagle(props: SVGProps<SVGSVGElement>) {
     </svg>
   );
 }
+
+export function CgMotorLifeBoat(props: React.ImgHTMLAttributes<HTMLImageElement>) {
+  return (
+    <img
+      src="/icons/cg-motor-life-boat.png"
+      alt="CG Motor Life Boat"
+      {...props}
+    />
+  );
+}
+
+

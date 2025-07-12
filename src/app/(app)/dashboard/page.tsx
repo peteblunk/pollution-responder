@@ -16,7 +16,7 @@ const requiredItemsIds = ['ppe', 'equipment', 'clothing', 'sample-kit', 'paperwo
 export default function DashboardPage() {
   const { state, eventLog, logEvent } = useGameState();
 
-  const missedRequiredItemsCount = state.missedChecklistItems.filter(id => requiredItemsIds.includes(id)).length;
+  const missedRequiredItemsCount = (state?.missedChecklistItems || []).filter(id => requiredItemsIds.includes(id)).length;
   const preparednessPenalty = missedRequiredItemsCount;
   const finalPreparedness = state.character.preparedness - preparednessPenalty;
 
