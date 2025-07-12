@@ -3,7 +3,7 @@
 
 import { useRef, useEffect, useState } from 'react';
 import { Button } from './ui/button';
-import { Eraser, Pencil, Trash2, Palette, Redo, Undo, CaseUpper, ShieldQuestion } from 'lucide-react';
+import { Eraser, Pencil, Trash2, Palette, CaseUpper, ShieldQuestion, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Checkbox } from './ui/checkbox';
@@ -85,6 +85,14 @@ export function WhiteboardCanvas() {
       }
   }
 
+  const endSession = () => {
+    if (isTyping && textareaRef.current?.value) {
+        drawTextFromArea(false);
+    }
+    setTimerActive(false);
+    setIsTyping(false);
+  };
+
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -109,12 +117,12 @@ export function WhiteboardCanvas() {
         setTimeLeft(prev => {
             if (prev <= 1) {
                 clearInterval(timer);
-                if (isTyping && textareaRef.current?.value) {
-                    drawTextFromArea(false);
-                }
-                setTimerActive(false);
-                setIsTyping(false); // Hide textarea when timer stops
+                endSession();
                 return 0;
+            }
+            if (!timerActive) {
+                clearInterval(timer);
+                return prev;
             }
             return prev - 1;
         });
@@ -122,7 +130,7 @@ export function WhiteboardCanvas() {
 
     return () => clearInterval(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [timerActive]);
   
   useEffect(() => {
       if (contextRef.current) {
@@ -219,6 +227,9 @@ export function WhiteboardCanvas() {
                     </div>
                 </PopoverContent>
             </Popover>
+            <Button variant="destructive" size="icon" onClick={clearCanvas} disabled={!timerActive}>
+                <Trash2 />
+            </Button>
             <div className="flex-grow text-center font-bold text-lg font-mono" >
                 {timerActive ? (
                    <span className={cn(timeLeft <= 30 && 'text-destructive')}>{`${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`}</span>
@@ -226,13 +237,9 @@ export function WhiteboardCanvas() {
                     <span className="text-primary">Time's Up!</span>
                 )}
             </div>
-            <div className="flex gap-2">
-                <Button variant="ghost" size="icon" disabled><Undo/></Button>
-                <Button variant="ghost" size="icon" disabled><Redo/></Button>
-                <Button variant="destructive" size="icon" onClick={clearCanvas} disabled={!timerActive}>
-                    <Trash2 />
-                </Button>
-            </div>
+            <Button onClick={endSession} disabled={!timerActive}>
+                <Check className="mr-2"/> I'm Ready
+            </Button>
         </div>
         <div className="flex-grow w-full min-h-0 rounded-md border overflow-hidden relative">
             <canvas
