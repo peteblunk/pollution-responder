@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useRef, useEffect, useState, useMemo } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import { Button } from './ui/button';
 import { Eraser, Pencil, Trash2, Palette, Redo, Undo, CaseUpper, ShieldQuestion } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -12,7 +12,8 @@ import { Separator } from './ui/separator';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import Link from 'next/link';
 import { Textarea } from './ui/textarea';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from './ui/card';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from './ui/card';
+import { ScrollArea } from './ui/scroll-area';
 
 const colors = [
   "#000000", // Black
@@ -54,6 +55,31 @@ export function WhiteboardCanvas() {
   const [isTyping, setIsTyping] = useState(false);
   
   const [missedItems, setMissedItems] = useState<string[]>([]);
+  
+  const drawTextFromArea = (andClose = true) => {
+      const textarea = textareaRef.current;
+      if (!contextRef.current || !textarea || !textarea.value) {
+          if(andClose) {
+            setIsTyping(false);
+            setTool('pencil');
+          }
+          return;
+      };
+      
+      contextRef.current.fillStyle = color;
+      contextRef.current.font = '16px "PT Sans"';
+      const lines = textarea.value.split('\n');
+      lines.forEach((line, index) => {
+        contextRef.current?.fillText(line, 20, 40 + (index * 20));
+      });
+      
+      textarea.value = '';
+
+      if (andClose) {
+        setIsTyping(false);
+        setTool('pencil');
+      }
+  }
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -79,6 +105,9 @@ export function WhiteboardCanvas() {
         setTimeLeft(prev => {
             if (prev <= 1) {
                 clearInterval(timer);
+                if (isTyping && textareaRef.current?.value) {
+                    drawTextFromArea(false);
+                }
                 setTimerActive(false);
                 setIsTyping(false); // Hide textarea when timer stops
                 return 0;
@@ -88,6 +117,7 @@ export function WhiteboardCanvas() {
     }, 1000);
 
     return () => clearInterval(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   
   useEffect(() => {
@@ -141,27 +171,6 @@ export function WhiteboardCanvas() {
     contextRef.current.lineTo(offsetX, offsetY);
     contextRef.current.stroke();
   };
-  
-  const drawTextFromArea = () => {
-      const textarea = textareaRef.current;
-      if (!contextRef.current || !textarea || !textarea.value) {
-          setIsTyping(false);
-          setTool('pencil');
-          return;
-      };
-      
-      contextRef.current.fillStyle = color;
-      contextRef.current.font = '16px "PT Sans"';
-      const lines = textarea.value.split('\n');
-      lines.forEach((line, index) => {
-        contextRef.current?.fillText(line, 20, 40 + (index * 20));
-      });
-      
-      textarea.value = '';
-      setIsTyping(false);
-      setTool('pencil');
-  }
-
 
   const clearCanvas = () => {
       const canvas = canvasRef.current;
@@ -237,43 +246,48 @@ export function WhiteboardCanvas() {
                     />
                     <div className='flex justify-end gap-2'>
                         <Button variant="ghost" onClick={() => { setIsTyping(false); setTool('pencil');}}>Cancel</Button>
-                        <Button onClick={drawTextFromArea}>Add Text to Whiteboard</Button>
+                        <Button onClick={() => drawTextFromArea()}>Add Text to Whiteboard</Button>
                     </div>
                 </div>
             )}
              {!timerActive && (
                 <div className="absolute inset-0 flex items-center justify-center p-4 bg-background/80">
-                   <Card className="w-full max-w-md shadow-2xl">
+                   <Card className="w-full max-w-md shadow-2xl flex flex-col max-h-[90%]">
                        <CardHeader>
                            <CardTitle className="font-headline text-2xl flex items-center gap-2"><ShieldQuestion/> Self-Assessment</CardTitle>
                            <CardDescription>Time to review your list. For each item or action you missed, check the box.</CardDescription>
                        </CardHeader>
-                       <CardContent className="space-y-4">
-                           <div>
-                                <h4 className="font-bold mb-2">Required Items</h4>
-                                <div className="space-y-2">
-                                {requiredItems.map(item => (
-                                    <div key={item.id} className="flex items-center space-x-2">
-                                        <Checkbox id={item.id} onCheckedChange={(checked) => onMissedItemChange(item.id, !!checked)} />
-                                        <Label htmlFor={item.id} className="font-normal">{item.label}</Label>
-                                    </div>
-                                ))}
-                                </div>
-                           </div>
-                           <Separator />
-                           <div>
-                                <h4 className="font-bold mb-2">Bonus Items</h4>
-                                <div className="space-y-2">
-                                {bonusItems.map(item => (
-                                    <div key={item.id} className="flex items-center space-x-2">
-                                        <Checkbox id={item.id} onCheckedChange={(checked) => onMissedItemChange(item.id, !!checked)} />
-                                        <Label htmlFor={item.id} className="font-normal">{item.label}</Label>
-                                    </div>
-                                ))}
-                                </div>
-                           </div>
-                           <Separator />
-                           <Alert variant="destructive">
+                       <CardContent className="flex-grow overflow-hidden">
+                           <ScrollArea className="h-full pr-4">
+                                <div className="space-y-4">
+                                   <div>
+                                        <h4 className="font-bold mb-2">Required Items</h4>
+                                        <div className="space-y-2">
+                                        {requiredItems.map(item => (
+                                            <div key={item.id} className="flex items-center space-x-2">
+                                                <Checkbox id={item.id} onCheckedChange={(checked) => onMissedItemChange(item.id, !!checked)} />
+                                                <Label htmlFor={item.id} className="font-normal">{item.label}</Label>
+                                            </div>
+                                        ))}
+                                        </div>
+                                   </div>
+                                   <Separator />
+                                   <div>
+                                        <h4 className="font-bold mb-2">Bonus Items</h4>
+                                        <div className="space-y-2">
+                                        {bonusItems.map(item => (
+                                            <div key={item.id} className="flex items-center space-x-2">
+                                                <Checkbox id={item.id} onCheckedChange={(checked) => onMissedItemChange(item.id, !!checked)} />
+                                                <Label htmlFor={item.id} className="font-normal">{item.label}</Label>
+                                            </div>
+                                        ))}
+                                        </div>
+                                   </div>
+                               </div>
+                           </ScrollArea>
+                       </CardContent>
+                       <CardFooter className='flex flex-col gap-4 pt-4 border-t'>
+                            <Alert variant="destructive">
                                <AlertTitle className="font-headline">Honor, Respect, Devotion to Duty</AlertTitle>
                                <AlertDescription>
                                    The effectiveness of this training relies on your honest self-assessment. Be truthful about what you missed.
@@ -282,7 +296,7 @@ export function WhiteboardCanvas() {
                            <Button className="w-full" asChild>
                                <Link href="/dashboard">Return to Dashboard ({missedItems.length} missed)</Link>
                            </Button>
-                       </CardContent>
+                       </CardFooter>
                    </Card>
                 </div>
             )}
