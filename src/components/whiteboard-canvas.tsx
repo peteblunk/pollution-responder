@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect, useState, useCallback } from 'react';
 import { Button } from './ui/button';
 import { Eraser, Pencil, Trash2, Palette, CaseUpper, ShieldQuestion, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -60,10 +60,10 @@ export function WhiteboardCanvas() {
   
   const [rememberedItems, setRememberedItems] = useState<string[]>([]);
   const [assessmentStep, setAssessmentStep] = useState<AssessmentStep>('honor');
-  const { updateMissedChecklistItems } = useGameState();
+  const { updateMissedChecklistItems, completeChecklist } = useGameState();
   const [canvasHeight, setCanvasHeight] = useState(800);
 
-  const wrapText = (context: CanvasRenderingContext2D, text: string, x: number, y: number, maxWidth: number, lineHeight: number, shouldDraw: boolean) => {
+  const wrapText = useCallback((context: CanvasRenderingContext2D, text: string, x: number, y: number, maxWidth: number, lineHeight: number, shouldDraw: boolean) => {
     const words = text.split(' ');
     let line = '';
     let currentY = y;
@@ -82,9 +82,9 @@ export function WhiteboardCanvas() {
     }
     if (shouldDraw) context.fillText(line, x, currentY);
     return currentY + lineHeight;
-  };
+  }, []);
   
-  const drawTextFromArea = async (andClose = true) => {
+  const drawTextFromArea = useCallback(async (andClose = true) => {
       const textarea = textareaRef.current;
       const canvas = canvasRef.current;
       if (!contextRef.current || !textarea || !textarea.value || !canvas) {
@@ -96,8 +96,8 @@ export function WhiteboardCanvas() {
       };
       
       const dpr = window.devicePixelRatio || 1;
-      const maxWidth = canvas.width / dpr - 40;
-      const lineHeight = 32; // Corresponds to font size
+      const maxWidth = (canvas.width / dpr) - 40;
+      const lineHeight = 32;
       const x = 20;
 
       contextRef.current.fillStyle = color;
@@ -105,27 +105,27 @@ export function WhiteboardCanvas() {
 
       const lines = textarea.value.split('\n');
 
-      // First, calculate the total height needed without drawing
-      let neededHeight = textYOffset;
-      lines.forEach((line) => {
-        neededHeight = wrapText(contextRef.current!, line, x, neededHeight, maxWidth, lineHeight, false);
-      });
+      const calculateNeededHeight = () => {
+        let neededHeight = textYOffset;
+        lines.forEach((line) => {
+          neededHeight = wrapText(contextRef.current!, line, x, neededHeight, maxWidth, lineHeight, false);
+        });
+        return neededHeight;
+      }
 
-      // If needed height is greater than current canvas height, resize it
+      let neededHeight = calculateNeededHeight();
+
       if (neededHeight > canvasHeight) {
-          setCanvasHeight(neededHeight + 100); // Add some buffer
-          // We need to wait for the resize to take effect
+          setCanvasHeight(neededHeight + 100);
           await new Promise(resolve => setTimeout(resolve, 0));
       }
 
-      // Now, draw the text on the (possibly resized) canvas
       let currentY = textYOffset;
       lines.forEach((line) => {
         currentY = wrapText(contextRef.current!, line, x, currentY, maxWidth, lineHeight, true);
       });
       
-      const newYOffset = currentY;
-      setTextYOffset(newYOffset);
+      setTextYOffset(currentY);
       
       textarea.value = '';
 
@@ -133,9 +133,9 @@ export function WhiteboardCanvas() {
         setIsTyping(false);
         setTool('pencil');
       }
-  }
+  }, [canvasHeight, color, textYOffset, wrapText]);
 
-  const endSession = () => {
+  const endSession = useCallback(() => {
     if (timerActive) {
       if (isTyping && textareaRef.current?.value) {
           drawTextFromArea(false);
@@ -143,7 +143,7 @@ export function WhiteboardCanvas() {
       setTimerActive(false);
       setIsTyping(false);
     }
-  };
+  }, [timerActive, isTyping, drawTextFromArea]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -156,8 +156,13 @@ export function WhiteboardCanvas() {
         const dpr = window.devicePixelRatio || 1;
         const rect = canvas.parentElement!.getBoundingClientRect();
         
-        // Preserve existing drawing
-        const existingImage = contextRef.current?.getImageData(0, 0, canvas.width, canvas.height);
+        const tempCanvas = document.createElement('canvas');
+        const tempCtx = tempCanvas.getContext('2d');
+        if (tempCtx) {
+          tempCanvas.width = canvas.width;
+          tempCanvas.height = canvas.height;
+          tempCtx.drawImage(canvas, 0, 0);
+        }
 
         canvas.width = rect.width * dpr;
         canvas.height = canvasHeight * dpr;
@@ -173,10 +178,9 @@ export function WhiteboardCanvas() {
         context.lineWidth = lineWidth;
         context.fillStyle = color;
         contextRef.current = context;
-
-        // Restore existing drawing
-        if (existingImage) {
-            context.putImageData(existingImage, 0, 0);
+        
+        if (tempCtx) {
+            context.drawImage(tempCanvas, 0, 0, tempCanvas.width / dpr, tempCanvas.height / dpr);
         }
     };
     
@@ -204,7 +208,7 @@ export function WhiteboardCanvas() {
         }, 1000);
         return () => clearInterval(timer);
     }
-  }, [timerActive]);
+  }, [timerActive, endSession]);
   
   useEffect(() => {
       if (contextRef.current) {
@@ -279,6 +283,7 @@ export function WhiteboardCanvas() {
     const missedRequired = requiredItems.filter(item => !rememberedItems.includes(item.id));
     const allMissed = missedRequired.map(i => i.id);
     updateMissedChecklistItems(allMissed);
+    completeChecklist();
   }
 
   const minutes = Math.floor(timeLeft / 60);
@@ -323,19 +328,20 @@ export function WhiteboardCanvas() {
         )}
         <div className="flex-grow w-full min-h-0 rounded-md border overflow-hidden relative grid grid-cols-1 md:grid-cols-2 md:gap-4 bg-card p-2">
             <ScrollArea className={cn("w-full h-full bg-white relative col-span-1 rounded-md", !timerActive && 'opacity-60 pointer-events-none')}>
-                 <canvas
+                <canvas
                     ref={canvasRef}
                     onMouseDown={startDrawing}
                     onMouseUp={finishDrawing}
                     onMouseMove={draw}
                     onMouseLeave={finishDrawing}
                     className="w-full"
+                    style={{ minHeight: `${canvasHeight}px` }}
                 />
             </ScrollArea>
 
             {isTyping && timerActive && (
-                <div className="absolute inset-2 left-1/2 -translate-x-1/2 md:left-auto md:translate-x-0 md:w-1/3 flex flex-col gap-2 bg-background/90 p-4 rounded-lg border z-10 w-full max-w-md">
-                    <Label htmlFor="text-input" className='font-headline'>Enter your checklist text below. Click "Add Text to Whiteboard" when finished.</Label>
+                <div className="absolute inset-x-2 top-2 md:left-1/2 md:-translate-x-1/2 flex flex-col gap-2 bg-background/90 p-4 rounded-lg border z-10 w-auto max-w-sm md:w-1/3">
+                    <Label htmlFor="text-input" className='font-headline'>Enter your checklist text below.</Label>
                     <Textarea 
                         ref={textareaRef}
                         id="text-input"
@@ -344,7 +350,7 @@ export function WhiteboardCanvas() {
                     />
                     <div className='flex justify-end gap-2'>
                         <Button variant="ghost" onClick={() => { setIsTyping(false); setTool('pencil');}}>Cancel</Button>
-                        <Button onClick={() => drawTextFromArea()}>Add Text to Whiteboard</Button>
+                        <Button onClick={() => drawTextFromArea()}>Add Text</Button>
                     </div>
                 </div>
             )}
@@ -357,9 +363,9 @@ export function WhiteboardCanvas() {
                                <CardTitle className="font-headline text-2xl text-center">Time's Up!</CardTitle>
                            </CardHeader>
                            <CardContent>
-                               <Alert variant="destructive" className="border-uscg-red text-uscg-red">
-                                   <AlertTitle className="font-headline text-lg">
-                                       <strong className="font-bold text-uscg-red">Honor</strong>, Respect, Devotion to Duty
+                               <Alert variant="destructive" className="border-uscg-red">
+                                   <AlertTitle className="font-headline text-lg text-uscg-red">
+                                       <strong className="font-bold">Honor</strong>, Respect, Devotion to Duty
                                    </AlertTitle>
                                    <AlertDescription className="text-uscg-red/80">
                                        The effectiveness of this training relies on your honest self-assessment. Be truthful about what you remembered as we review your list.

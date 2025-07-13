@@ -23,8 +23,7 @@ export default function DashboardPage() {
   const finalPreparedness = state.character.preparedness - preparednessPenalty;
 
   useEffect(() => {
-    // Only show the briefing alert if the character is locked and it hasn't been shown yet
-    if (state.characterLocked && !showBriefing && !state.briefingAcknowledged) {
+    if (state.characterLocked && !state.briefingAcknowledged && !showBriefing) {
         const timer = setTimeout(() => {
           try {
             const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -47,11 +46,7 @@ export default function DashboardPage() {
 
         return () => clearTimeout(timer);
     }
-    // If the briefing is already acknowledged in the state, just show it directly.
-    if (state.briefingAcknowledged) {
-        setShowBriefing(true);
-    }
-  }, [state.characterLocked, showBriefing, state.briefingAcknowledged, logEvent]);
+  }, [state.characterLocked, state.briefingAcknowledged, showBriefing, logEvent]);
 
   if (!state.characterLocked) {
       return (
@@ -71,21 +66,50 @@ export default function DashboardPage() {
       )
   }
 
-  if (!showBriefing && !state.briefingAcknowledged) {
-      return (
-          <div className="flex flex-col items-center justify-center h-full text-center">
-              <Card className="max-w-md">
-                  <CardHeader>
-                      <CardTitle className="font-headline text-2xl">On Standby</CardTitle>
-                      <CardDescription>Awaiting dispatch from the Command Center.</CardDescription>
-                  </CardHeader>
-                  <CardContent className="flex flex-col items-center justify-center p-10">
-                      <Loader2 className="w-16 h-16 animate-spin text-primary" />
-                      <p className="mt-4 text-muted-foreground">Your shift has just begun...</p>
-                  </CardContent>
-              </Card>
-          </div>
-      )
+  if (!state.briefingAcknowledged) {
+      if (!showBriefing) {
+          return (
+              <div className="flex flex-col items-center justify-center h-full text-center">
+                  <Card className="max-w-md">
+                      <CardHeader>
+                          <CardTitle className="font-headline text-2xl">On Standby</CardTitle>
+                          <CardDescription>Awaiting dispatch from the Command Center.</CardDescription>
+                      </CardHeader>
+                      <CardContent className="flex flex-col items-center justify-center p-10">
+                          <Loader2 className="w-16 h-16 animate-spin text-primary" />
+                          <p className="mt-4 text-muted-foreground">Your shift has just begun...</p>
+                      </CardContent>
+                  </Card>
+              </div>
+          )
+      } else {
+        // This is the view for the initial alert BEFORE acknowledgement
+        return (
+            <Card>
+                <CardHeader>
+                    <CardTitle className="font-headline text-2xl flex items-center gap-2"><BellRing className="text-destructive animate-pulse"/> Initial Report</CardTitle>
+                    <CardDescription>
+                    1000 Hours - The call just came in: 'Potential diesel fuel leak from a vessel moored at Pier 3 at a Marina in Smuggler’s Cove on the Kitsap Peninsula.'
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <Alert variant="destructive">
+                        <Wind className="h-4 w-4" />
+                        <AlertTitle>Initial Briefing</AlertTitle>
+                        <AlertDescription>
+                            You're the first responders. The Command Center is waiting for your initial report. Acknowledge this message to proceed.
+                        </AlertDescription>
+                    </Alert>
+                    
+                    <div className="mt-4 text-center">
+                        <Button onClick={() => { acknowledgeBriefing(); logEvent("Briefing acknowledged. Preparing for departure.")}}>
+                            Message Received
+                        </Button>
+                    </div>
+                </CardContent>
+            </Card>
+        )
+      }
   }
 
   return (
@@ -93,31 +117,15 @@ export default function DashboardPage() {
       <div className="lg:col-span-2 space-y-6">
         <Card>
           <CardHeader>
-            <CardTitle className="font-headline text-2xl flex items-center gap-2"><BellRing className="text-destructive animate-pulse"/> Phase 0: Office Briefing & Departure Prep</CardTitle>
+            <CardTitle className="font-headline text-2xl flex items-center gap-2"><BellRing className="text-destructive"/> Phase 0: Office Briefing & Departure Prep</CardTitle>
             <CardDescription>
               1000 Hours - The call just came in: 'Potential diesel fuel leak from a vessel moored at Pier 3 at a Marina in Smuggler’s Cove on the Kitsap Peninsula.'
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Alert variant="destructive" className="border-destructive/50">
-              <Wind className="h-4 w-4" />
-              <AlertTitle>Initial Report</AlertTitle>
-              <AlertDescription>
-                You're the first responders. The Command Center is waiting for your initial report.
-              </AlertDescription>
-            </Alert>
-            
-            {!state.briefingAcknowledged && (
-                <div className="mt-4 text-center">
-                    <Button onClick={() => { acknowledgeBriefing(); logEvent("Briefing acknowledged. Preparing for departure.")}}>
-                        Message Received
-                    </Button>
-                </div>
-            )}
-            
-            {state.briefingAcknowledged && (
+            {!state.checklistComplete ? (
                 <>
-                    <p className="mt-4 text-base">
+                    <p className="text-base">
                       Before you even step out the door, you need to be prepared. What's your quick checklist of things you need to confirm or do before you leave the office?
                     </p>
                     <div className="mt-6 p-4 border rounded-lg bg-muted/30">
@@ -130,60 +138,62 @@ export default function DashboardPage() {
                         </Button>
                     </div>
                 </>
+            ) : (
+                <Alert>
+                    <CheckSquare className="h-4 w-4"/>
+                    <AlertTitle>Checklist Complete</AlertTitle>
+                    <AlertDescription>You've finalized your preparations. Time to see if you're ready for the road.</AlertDescription>
+                </Alert>
             )}
           </CardContent>
         </Card>
-
-        {state.briefingAcknowledged && (
-        <>
-            <Card>
-                <CardHeader>
-                    <CardTitle className="font-headline">Pre-Departure Actions & Rolls</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                    <div className="flex flex-wrap items-center justify-between gap-4 p-3 border rounded-lg">
-                        <div>
-                            <h4 className="font-medium flex items-center gap-2"><Phone/>Duty Sup Check-in</h4>
-                            <p className="text-sm text-muted-foreground">Report your departure and initial intentions.</p>
-                        </div>
-                        <Button onClick={() => logEvent("Successfully checked in with Duty Supervisor.")}>Check In</Button>
+        
+        <Card>
+            <CardHeader>
+                <CardTitle className="font-headline">Pre-Departure Actions & Rolls</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+                <div className="flex flex-wrap items-center justify-between gap-4 p-3 border rounded-lg">
+                    <div>
+                        <h4 className="font-medium flex items-center gap-2"><Phone/>Duty Sup Check-in</h4>
+                        <p className="text-sm text-muted-foreground">Report your departure and initial intentions.</p>
                     </div>
-                     <div className="flex flex-wrap items-center justify-between gap-4 p-3 border rounded-lg">
-                        <div>
-                            <h4 className="font-medium flex items-center gap-2"><CheckSquare/>Sample Kit Check</h4>
-                            <p className="text-sm text-muted-foreground">Confirm your sample kit is fully stocked.</p>
-                        </div>
-                        <DiceRoller sides={12} onRoll={(roll) => logEvent(`Rolled a ${roll} on Sample Kit check (2d6, using d12 for simplicity).`)}>Roll Preparedness</DiceRoller>
+                    <Button onClick={() => logEvent("Successfully checked in with Duty Supervisor.")}>Check In</Button>
+                </div>
+                 <div className="flex flex-wrap items-center justify-between gap-4 p-3 border rounded-lg">
+                    <div>
+                        <h4 className="font-medium flex items-center gap-2"><CheckSquare/>Sample Kit Check</h4>
+                        <p className="text-sm text-muted-foreground">Confirm your sample kit is fully stocked.</p>
                     </div>
-                     <div className="flex flex-wrap items-center justify-between gap-4 p-3 border rounded-lg">
-                        <div>
-                            <h4 className="font-medium flex items-center gap-2"><Ship/>Drive to Ferry</h4>
-                            <p className="text-sm text-muted-foreground">Time to head out. Let's hope you don't forget anything.</p>
-                        </div>
-                        <DiceRoller sides={12} onRoll={(roll) => logEvent(`Rolled a ${roll} for departure (Luck/Preparedness).`)}>Roll for Departure</DiceRoller>
+                    <DiceRoller sides={12} onRoll={(roll) => logEvent(`Rolled a ${roll} on Sample Kit check (2d6, using d12 for simplicity).`)}>Roll Preparedness</DiceRoller>
+                </div>
+                 <div className="flex flex-wrap items-center justify-between gap-4 p-3 border rounded-lg">
+                    <div>
+                        <h4 className="font-medium flex items-center gap-2"><Ship/>Drive to Ferry</h4>
+                        <p className="text-sm text-muted-foreground">Time to head out. Let's hope you don't forget anything.</p>
                     </div>
-                </CardContent>
-            </Card>
-            
-            <Card>
-                <CardHeader>
-                    <CardTitle className="font-headline">Event Log</CardTitle>
-                    <CardDescription>A log of your decisions and their outcomes.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <div className="space-y-4 max-h-48 overflow-y-auto pr-2">
-                        {eventLog.length === 0 ? (
-                            <p className="text-sm text-muted-foreground">No events yet. Make your first move!</p>
-                        ) : (
-                            [...eventLog].reverse().map((log, index) => (
-                                <div key={index} className="text-sm">{log}</div>
-                            ))
-                        )}
-                    </div>
-                </CardContent>
-            </Card>
-        </>
-        )}
+                    <DiceRoller sides={12} onRoll={(roll) => logEvent(`Rolled a ${roll} for departure (Luck/Preparedness).`)}>Roll for Departure</DiceRoller>
+                </div>
+            </CardContent>
+        </Card>
+        
+        <Card>
+            <CardHeader>
+                <CardTitle className="font-headline">Event Log</CardTitle>
+                <CardDescription>A log of your decisions and their outcomes.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <div className="space-y-4 max-h-48 overflow-y-auto pr-2">
+                    {eventLog.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">No events yet. Make your first move!</p>
+                    ) : (
+                        [...eventLog].reverse().map((log, index) => (
+                            <div key={index} className="text-sm">{log}</div>
+                        ))
+                    )}
+                </div>
+            </CardContent>
+        </Card>
       </div>
 
       <div className="lg:col-span-1 space-y-6">
@@ -209,7 +219,7 @@ export default function DashboardPage() {
               <label className="text-sm font-medium">Luck: {state.character.luck}</label>
               <Progress value={state.character.luck * 10} max={100} className="h-2"/>
             </div>
-            {preparednessPenalty > 0 && (
+            {state.checklistComplete && preparednessPenalty > 0 && (
               <Alert variant="destructive" className="border-destructive/50 text-destructive">
                 <ShieldAlert className="h-4 w-4" />
                 <AlertTitle>Preparedness Penalty!</AlertTitle>

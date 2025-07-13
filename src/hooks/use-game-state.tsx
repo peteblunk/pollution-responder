@@ -13,7 +13,8 @@ type GameStateAction =
   | { type: 'UPDATE_CHARACTER_CREATION'; payload: CharacterCreationState }
   | { type: 'UPDATE_MISSED_CHECKLIST_ITEMS'; payload: string[] }
   | { type: 'LOCK_CHARACTER' }
-  | { type: 'ACKNOWLEDGE_BRIEFING' };
+  | { type: 'ACKNOWLEDGE_BRIEFING' }
+  | { type: 'COMPLETE_CHECKLIST' };
 
 const GameStateContext = createContext<{
   state: GameState;
@@ -26,6 +27,7 @@ const GameStateContext = createContext<{
   updateMissedChecklistItems: (items: string[]) => void;
   lockCharacter: () => void;
   acknowledgeBriefing: () => void;
+  completeChecklist: () => void;
 } | undefined>(undefined);
 
 const gameStateReducer = (state: GameState, action: GameStateAction): GameState => {
@@ -46,6 +48,8 @@ const gameStateReducer = (state: GameState, action: GameStateAction): GameState 
         return { ...state, characterLocked: true };
     case 'ACKNOWLEDGE_BRIEFING':
         return { ...state, briefingAcknowledged: true };
+    case 'COMPLETE_CHECKLIST':
+        return { ...state, checklistComplete: true };
     default:
       return state;
   }
@@ -103,7 +107,11 @@ export const GameStateProvider = ({ children }: { children: ReactNode }) => {
       dispatch({ type: 'ACKNOWLEDGE_BRIEFING' });
   }, []);
 
-  const value = { state, dispatch, eventLog: state.eventLog, updateCharacter, updateICS201, logEvent, updateCharacterCreationState, updateMissedChecklistItems, lockCharacter, acknowledgeBriefing };
+  const completeChecklist = useCallback(() => {
+      dispatch({ type: 'COMPLETE_CHECKLIST' });
+  }, []);
+
+  const value = { state, dispatch, eventLog: state.eventLog, updateCharacter, updateICS201, logEvent, updateCharacterCreationState, updateMissedChecklistItems, lockCharacter, acknowledgeBriefing, completeChecklist };
 
   return (
     <GameStateContext.Provider value={value}>

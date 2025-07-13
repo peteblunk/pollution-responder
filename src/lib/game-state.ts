@@ -46,6 +46,7 @@ export interface GameState {
   missedChecklistItems: string[];
   characterLocked: boolean;
   briefingAcknowledged: boolean;
+  checklistComplete: boolean;
 }
 
 const today = new Date();
@@ -90,4 +91,5 @@ export const initialState: GameState = {
   missedChecklistItems: [],
   characterLocked: false,
   briefingAcknowledged: false,
+  checklistComplete: false,
 };
