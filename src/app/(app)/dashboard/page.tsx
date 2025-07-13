@@ -6,26 +6,70 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { useGameState } from "@/hooks/use-game-state";
 import { DiceRoller } from "@/components/dice-roller";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { FileText, LifeBuoy, Ship, User, Wind, ClipboardCheck, Phone, CheckSquare, Edit3, ShieldAlert, ArrowRight } from "lucide-react";
+import { FileText, LifeBuoy, Ship, User, Wind, ClipboardCheck, Phone, CheckSquare, Edit3, ShieldAlert, ArrowRight, BellRing, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
+import { useEffect, useState } from "react";
 
 const requiredItemsIds = ['ppe', 'equipment', 'clothing', 'sample-kit', 'paperwork', 'other', 'calls', 'jurisdiction'];
 
 export default function DashboardPage() {
   const { state, eventLog, logEvent } = useGameState();
+  const [showBriefing, setShowBriefing] = useState(false);
 
   const missedRequiredItemsCount = (state?.missedChecklistItems || []).filter(id => requiredItemsIds.includes(id)).length;
   const preparednessPenalty = missedRequiredItemsCount;
   const finalPreparedness = state.character.preparedness - preparednessPenalty;
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      // Play a simple alert sound
+      try {
+        const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(880, audioContext.currentTime); // A5 note
+        gainNode.gain.setValueAtTime(0.1, audioContext.currentTime); // Volume
+        oscillator.start();
+        oscillator.stop(audioContext.currentTime + 0.2); // Beep for 0.2s
+      } catch (e) {
+        console.error("Could not play audio alert", e);
+      }
+      
+      setShowBriefing(true);
+      logEvent("Initial incident report received.");
+    }, 3000); // 3-second delay
+
+    return () => clearTimeout(timer);
+  }, [logEvent]);
+
+  if (!showBriefing) {
+      return (
+          <div className="flex flex-col items-center justify-center h-full text-center">
+              <Card className="max-w-md">
+                  <CardHeader>
+                      <CardTitle className="font-headline text-2xl">On Standby</CardTitle>
+                      <CardDescription>Awaiting dispatch from the Command Center.</CardDescription>
+                  </CardHeader>
+                  <CardContent className="flex flex-col items-center justify-center p-10">
+                      <Loader2 className="w-16 h-16 animate-spin text-primary" />
+                      <p className="mt-4 text-muted-foreground">Your shift has just begun...</p>
+                  </CardContent>
+              </Card>
+          </div>
+      )
+  }
 
   return (
     <div className="grid gap-6 lg:grid-cols-3">
       <div className="lg:col-span-2 space-y-6">
         <Card>
           <CardHeader>
-            <CardTitle className="font-headline text-2xl">Phase 0: Office Briefing & Departure Prep</CardTitle>
+            <CardTitle className="font-headline text-2xl flex items-center gap-2"><BellRing className="text-destructive animate-pulse"/> Phase 0: Office Briefing & Departure Prep</CardTitle>
             <CardDescription>
               1000 Hours - The call just came in: 'Potential diesel fuel leak from a vessel moored at Pier 3 at a Marina in Smuggler’s Cove on the Kitsap Peninsula.'
             </CardDescription>
@@ -44,7 +88,7 @@ export default function DashboardPage() {
             <div className="mt-6 p-4 border rounded-lg bg-muted/30">
                 <h4 className="font-headline text-lg flex items-center gap-2 mb-3"><ClipboardCheck/> Pre-Departure Checklist</h4>
                 <p className="text-sm mb-4">
-                    You take a moment to consider potential pre-departure hazards and plan your loadout. Use the whiteboard to make a checklist of everything you will need. You will have four minutes.
+                    You take a moment to consider potential pre-departure hazards and plan your loadout. Use the whiteboard to make a checklist of everything you will need. You have four minutes.
                 </p>
                 <Button asChild>
                     <Link href="/whiteboard"><Edit3 className="mr-2"/> Open Whiteboard</Link>
