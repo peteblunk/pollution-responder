@@ -61,6 +61,7 @@ export function WhiteboardCanvas() {
   const [rememberedItems, setRememberedItems] = useState<string[]>([]);
   const [assessmentStep, setAssessmentStep] = useState<AssessmentStep>('honor');
   const { updateMissedChecklistItems } = useGameState();
+  const [canvasHeight, setCanvasHeight] = useState(800);
 
   const wrapText = (context: CanvasRenderingContext2D, text: string, x: number, y: number, maxWidth: number, lineHeight: number) => {
     const words = text.split(' ');
@@ -95,18 +96,22 @@ export function WhiteboardCanvas() {
       };
       
       contextRef.current.fillStyle = color;
-      contextRef.current.font = '16px "PT Sans"';
+      contextRef.current.font = '24px "Gochi Hand"';
 
       const lines = textarea.value.split('\n');
       let currentY = textYOffset;
       const maxWidth = canvas.width / (window.devicePixelRatio || 1) - 40; // 20px padding on each side
-      const lineHeight = 20;
+      const lineHeight = 30;
 
       lines.forEach((line) => {
         currentY = wrapText(contextRef.current!, line, 20, currentY, maxWidth, lineHeight);
       });
 
-      setTextYOffset(currentY + lineHeight); // Add extra space for the next text block
+      const newYOffset = currentY + lineHeight;
+      if (newYOffset > canvasHeight) {
+          setCanvasHeight(newYOffset + 200); // Add some buffer
+      }
+      setTextYOffset(newYOffset);
       
       textarea.value = '';
 
@@ -129,26 +134,25 @@ export function WhiteboardCanvas() {
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.parentElement!.getBoundingClientRect();
+    canvas.width = rect.width * dpr;
+    canvas.height = canvasHeight * dpr;
+
+    const context = canvas.getContext('2d');
+    if(!context) return;
     
-    // Check if context already exists to prevent resetting
-    if (!contextRef.current) {
-        const context = canvas.getContext('2d');
-        if (!context) return;
-        
-        const dpr = window.devicePixelRatio || 1;
-        const rect = canvas.parentElement!.getBoundingClientRect();
-        canvas.width = rect.width * dpr;
-        canvas.height = rect.height * dpr;
-        
-        context.scale(dpr, dpr);
-        context.lineCap = 'round';
-        context.strokeStyle = color;
-        context.lineWidth = lineWidth;
-        context.font = '16px "PT Sans"';
-        contextRef.current = context;
-    }
-    
-    // Timer logic
+    context.scale(dpr, dpr);
+    context.lineCap = 'round';
+    context.strokeStyle = color;
+    context.lineWidth = lineWidth;
+    context.fillStyle = color;
+    contextRef.current = context;
+
+  }, [canvasHeight, color, lineWidth]);
+  
+  useEffect(() => {
     if (timerActive) {
         const timer = setInterval(() => {
             setTimeLeft(prev => {
@@ -236,7 +240,7 @@ export function WhiteboardCanvas() {
   
   const handleReturnToDashboard = () => {
     const missedRequired = requiredItems.filter(item => !rememberedItems.includes(item.id));
-    const allMissed = missedRequired.map(i => i.id); // For now, only required items cause a penalty.
+    const allMissed = missedRequired.map(i => i.id);
     updateMissedChecklistItems(allMissed);
   }
 
@@ -281,7 +285,7 @@ export function WhiteboardCanvas() {
             </div>
         )}
         <div className="flex-grow w-full min-h-0 rounded-md border overflow-hidden relative grid grid-cols-1 md:grid-cols-2 md:gap-4 bg-card p-2">
-            <div className={cn("w-full h-full bg-white relative col-span-1", !timerActive && 'opacity-60 pointer-events-none')}>
+            <ScrollArea className={cn("w-full h-full bg-white relative col-span-1 rounded-md", !timerActive && 'opacity-60 pointer-events-none')}>
                 <canvas
                     ref={canvasRef}
                     onMouseDown={startDrawing}
@@ -289,8 +293,9 @@ export function WhiteboardCanvas() {
                     onMouseMove={draw}
                     onMouseLeave={finishDrawing}
                     className="w-full h-full"
+                    style={{ height: `${canvasHeight}px`}}
                 />
-            </div>
+            </ScrollArea>
 
             {isTyping && timerActive && (
                 <div className="absolute inset-2 left-1/2 -translate-x-1/2 md:left-auto md:translate-x-0 md:w-1/3 flex flex-col gap-2 bg-background/90 p-4 rounded-lg border z-10 w-full max-w-md">
@@ -337,7 +342,7 @@ export function WhiteboardCanvas() {
                        <Card className="flex flex-col h-full">
                            <CardHeader>
                                <CardTitle className="font-headline text-2xl flex items-center gap-2"><ShieldQuestion/> Self-Assessment</CardTitle>
-                               <CardDescription>Review your list. Check the box for each item you remembered.</CardDescription>
+                               <CardDescription>Review your list on the left. Check the box for each item you included.</CardDescription>
                            </CardHeader>
                            <CardContent className="flex-grow overflow-hidden">
                                <ScrollArea className="h-full pr-4">
