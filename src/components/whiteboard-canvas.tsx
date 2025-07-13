@@ -63,7 +63,7 @@ export function WhiteboardCanvas() {
   const { updateMissedChecklistItems } = useGameState();
   const [canvasHeight, setCanvasHeight] = useState(800);
 
-  const wrapText = (context: CanvasRenderingContext2D, text: string, x: number, y: number, maxWidth: number, lineHeight: number) => {
+  const wrapText = (context: CanvasRenderingContext2D, text: string, x: number, y: number, maxWidth: number, lineHeight: number, shouldDraw: boolean) => {
     const words = text.split(' ');
     let line = '';
     let currentY = y;
@@ -73,14 +73,14 @@ export function WhiteboardCanvas() {
       const metrics = context.measureText(testLine);
       const testWidth = metrics.width;
       if (testWidth > maxWidth && n > 0) {
-        context.fillText(line, x, currentY);
+        if (shouldDraw) context.fillText(line, x, currentY);
         line = words[n] + ' ';
         currentY += lineHeight;
       } else {
         line = testLine;
       }
     }
-    context.fillText(line, x, currentY);
+    if (shouldDraw) context.fillText(line, x, currentY);
     return currentY + lineHeight;
   };
   
@@ -95,25 +95,38 @@ export function WhiteboardCanvas() {
           return;
       };
       
-      // Wait for the font to be loaded before trying to use it
       await document.fonts.ready;
       
+      const dpr = window.devicePixelRatio || 1;
+      const maxWidth = canvas.width / dpr - 40;
+      const lineHeight = 30;
+      const x = 20;
+
       contextRef.current.fillStyle = color;
       contextRef.current.font = '24px "Gochi Hand"';
 
       const lines = textarea.value.split('\n');
-      let currentY = textYOffset;
-      const maxWidth = canvas.width / (window.devicePixelRatio || 1) - 40; // 20px padding on each side
-      const lineHeight = 30;
 
+      // First, calculate the total height needed without drawing
+      let neededHeight = textYOffset;
       lines.forEach((line) => {
-        currentY = wrapText(contextRef.current!, line, 20, currentY, maxWidth, lineHeight);
+        neededHeight = wrapText(contextRef.current!, line, x, neededHeight, maxWidth, lineHeight, false);
       });
 
-      const newYOffset = currentY + lineHeight;
-      if (newYOffset > canvasHeight) {
-          setCanvasHeight(newYOffset + 200); // Add some buffer
+      // If needed height is greater than current canvas height, resize it
+      if (neededHeight > canvasHeight) {
+          setCanvasHeight(neededHeight + 100); // Add some buffer
+          // We need to wait for the resize to take effect
+          await new Promise(resolve => setTimeout(resolve, 0));
       }
+
+      // Now, draw the text on the (possibly resized) canvas
+      let currentY = textYOffset;
+      lines.forEach((line) => {
+        currentY = wrapText(contextRef.current!, line, x, currentY, maxWidth, lineHeight, true);
+      });
+      
+      const newYOffset = currentY;
       setTextYOffset(newYOffset);
       
       textarea.value = '';
@@ -138,15 +151,20 @@ export function WhiteboardCanvas() {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    // Use a variable to track if the component is still mounted
     let isMounted = true;
     
     const setCanvasDimensions = () => {
         if (!canvas || !canvas.parentElement || !isMounted) return;
         const dpr = window.devicePixelRatio || 1;
         const rect = canvas.parentElement!.getBoundingClientRect();
+        
+        // Preserve existing drawing
+        const existingImage = contextRef.current?.getImageData(0, 0, canvas.width, canvas.height);
+
         canvas.width = rect.width * dpr;
         canvas.height = canvasHeight * dpr;
+        canvas.style.width = `${rect.width}px`;
+        canvas.style.height = `${canvasHeight}px`;
 
         const context = canvas.getContext('2d');
         if(!context) return;
@@ -157,14 +175,21 @@ export function WhiteboardCanvas() {
         context.lineWidth = lineWidth;
         context.fillStyle = color;
         contextRef.current = context;
+
+        // Restore existing drawing
+        if (existingImage) {
+            context.putImageData(existingImage, 0, 0);
+        }
     };
     
     setCanvasDimensions();
+    const resizeObserver = new ResizeObserver(setCanvasDimensions);
+    resizeObserver.observe(canvas.parentElement!);
 
     return () => {
       isMounted = false;
+      resizeObserver.disconnect();
     }
-
   }, [canvasHeight, color, lineWidth]);
   
   useEffect(() => {
@@ -181,7 +206,6 @@ export function WhiteboardCanvas() {
         }, 1000);
         return () => clearInterval(timer);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [timerActive]);
   
   useEffect(() => {
@@ -245,7 +269,7 @@ export function WhiteboardCanvas() {
       if (canvas && context) {
           const dpr = window.devicePixelRatio || 1;
           context.clearRect(0, 0, canvas.width/dpr, canvas.height/dpr);
-          setTextYOffset(40); // Reset text position
+          setTextYOffset(40);
       }
   }
 
@@ -301,14 +325,13 @@ export function WhiteboardCanvas() {
         )}
         <div className="flex-grow w-full min-h-0 rounded-md border overflow-hidden relative grid grid-cols-1 md:grid-cols-2 md:gap-4 bg-card p-2">
             <ScrollArea className={cn("w-full h-full bg-white relative col-span-1 rounded-md", !timerActive && 'opacity-60 pointer-events-none')}>
-                <canvas
+                 <canvas
                     ref={canvasRef}
                     onMouseDown={startDrawing}
                     onMouseUp={finishDrawing}
                     onMouseMove={draw}
                     onMouseLeave={finishDrawing}
-                    className="w-full h-full"
-                    style={{ height: `${canvasHeight}px`}}
+                    className="w-full"
                 />
             </ScrollArea>
 
@@ -318,7 +341,7 @@ export function WhiteboardCanvas() {
                     <Textarea 
                         ref={textareaRef}
                         id="text-input"
-                        className="flex-grow bg-white/80"
+                        className="flex-grow bg-white/80 font-handwritten"
                         placeholder='- PPE (gloves, hard hat...)'
                     />
                     <div className='flex justify-end gap-2'>
@@ -402,3 +425,5 @@ export function WhiteboardCanvas() {
     </div>
   );
 }
+
+    
