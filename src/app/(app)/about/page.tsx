@@ -1,3 +1,5 @@
+"use client";
+
 import React from 'react';
 import { useGameState } from '@/hooks/use-game-state';
 
