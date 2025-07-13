@@ -15,18 +15,17 @@ import { useEffect, useState } from "react";
 const requiredItemsIds = ['ppe', 'equipment', 'clothing', 'sample-kit', 'paperwork', 'other', 'calls', 'jurisdiction'];
 
 export default function DashboardPage() {
-  const { state, eventLog, logEvent } = useGameState();
+  const { state, eventLog, logEvent, acknowledgeBriefing } = useGameState();
   const [showBriefing, setShowBriefing] = useState(false);
-  const [isBriefingAcknowledged, setIsBriefingAcknowledged] = useState(false);
 
   const missedRequiredItemsCount = (state?.missedChecklistItems || []).filter(id => requiredItemsIds.includes(id)).length;
   const preparednessPenalty = missedRequiredItemsCount;
   const finalPreparedness = state.character.preparedness - preparednessPenalty;
 
   useEffect(() => {
-    if (state.characterLocked && !showBriefing) {
+    // Only show the briefing alert if the character is locked and it hasn't been shown yet
+    if (state.characterLocked && !showBriefing && !state.briefingAcknowledged) {
         const timer = setTimeout(() => {
-          // Play a simple alert sound
           try {
             const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
             const oscillator = audioContext.createOscillator();
@@ -48,7 +47,11 @@ export default function DashboardPage() {
 
         return () => clearTimeout(timer);
     }
-  }, [logEvent, state.characterLocked, showBriefing]);
+    // If the briefing is already acknowledged in the state, just show it directly.
+    if (state.briefingAcknowledged) {
+        setShowBriefing(true);
+    }
+  }, [state.characterLocked, showBriefing, state.briefingAcknowledged, logEvent]);
 
   if (!state.characterLocked) {
       return (
@@ -68,7 +71,7 @@ export default function DashboardPage() {
       )
   }
 
-  if (!showBriefing) {
+  if (!showBriefing && !state.briefingAcknowledged) {
       return (
           <div className="flex flex-col items-center justify-center h-full text-center">
               <Card className="max-w-md">
@@ -104,15 +107,15 @@ export default function DashboardPage() {
               </AlertDescription>
             </Alert>
             
-            {!isBriefingAcknowledged && (
+            {!state.briefingAcknowledged && (
                 <div className="mt-4 text-center">
-                    <Button onClick={() => { setIsBriefingAcknowledged(true); logEvent("Briefing acknowledged. Preparing for departure.")}}>
+                    <Button onClick={() => { acknowledgeBriefing(); logEvent("Briefing acknowledged. Preparing for departure.")}}>
                         Message Received
                     </Button>
                 </div>
             )}
             
-            {isBriefingAcknowledged && (
+            {state.briefingAcknowledged && (
                 <>
                     <p className="mt-4 text-base">
                       Before you even step out the door, you need to be prepared. What's your quick checklist of things you need to confirm or do before you leave the office?
@@ -131,7 +134,7 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        {isBriefingAcknowledged && (
+        {state.briefingAcknowledged && (
         <>
             <Card>
                 <CardHeader>
@@ -237,5 +240,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-
-    
