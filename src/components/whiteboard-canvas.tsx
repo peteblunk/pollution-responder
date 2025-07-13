@@ -61,10 +61,32 @@ export function WhiteboardCanvas() {
   const [missedItems, setMissedItems] = useState<string[]>([]);
   const [assessmentStep, setAssessmentStep] = useState<AssessmentStep>('honor');
   const { updateMissedChecklistItems } = useGameState();
-  
+
+  const wrapText = (context: CanvasRenderingContext2D, text: string, x: number, y: number, maxWidth: number, lineHeight: number) => {
+    const words = text.split(' ');
+    let line = '';
+    let currentY = y;
+
+    for (let n = 0; n < words.length; n++) {
+      const testLine = line + words[n] + ' ';
+      const metrics = context.measureText(testLine);
+      const testWidth = metrics.width;
+      if (testWidth > maxWidth && n > 0) {
+        context.fillText(line, x, currentY);
+        line = words[n] + ' ';
+        currentY += lineHeight;
+      } else {
+        line = testLine;
+      }
+    }
+    context.fillText(line, x, currentY);
+    return currentY + lineHeight;
+  };
+
   const drawTextFromArea = (andClose = true) => {
       const textarea = textareaRef.current;
-      if (!contextRef.current || !textarea || !textarea.value) {
+      const canvas = canvasRef.current;
+      if (!contextRef.current || !textarea || !textarea.value || !canvas) {
           if(andClose) {
             setIsTyping(false);
             setTool('pencil');
@@ -74,13 +96,17 @@ export function WhiteboardCanvas() {
       
       contextRef.current.fillStyle = color;
       contextRef.current.font = '16px "PT Sans"';
+
       const lines = textarea.value.split('\n');
       let currentY = textYOffset;
+      const maxWidth = canvas.width / (window.devicePixelRatio || 1) - 40; // 20px padding on each side
+      const lineHeight = 20;
+
       lines.forEach((line) => {
-        contextRef.current?.fillText(line, 20, currentY);
-        currentY += 20; // Move to the next line
+        currentY = wrapText(contextRef.current!, line, 20, currentY, maxWidth, lineHeight);
       });
-      setTextYOffset(currentY + 20); // Add extra space for the next text block
+
+      setTextYOffset(currentY + lineHeight); // Add extra space for the next text block
       
       textarea.value = '';
 
@@ -252,7 +278,7 @@ export function WhiteboardCanvas() {
             </div>
         )}
         <div className="flex-grow w-full min-h-0 rounded-md border overflow-hidden relative grid grid-cols-1 md:grid-cols-2 md:gap-4 bg-card p-2">
-            <div className={cn("w-full h-full bg-white relative", !timerActive && 'opacity-60 pointer-events-none col-span-1')}>
+            <div className={cn("w-full h-full bg-white relative col-span-1", !timerActive && 'opacity-60 pointer-events-none')}>
                 <canvas
                     ref={canvasRef}
                     onMouseDown={startDrawing}
