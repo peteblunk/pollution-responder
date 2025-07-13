@@ -119,7 +119,7 @@ export const GameStateProvider = ({ children }: { children: ReactNode }) => {
       dispatch({ type: 'COMPLETE_CHECKLIST' });
   }, []);
 
-  const value = { state, dispatch, eventLog: state.eventLog, updateCharacter, updateICS201, logEvent, updateCharacterCreationState, updateMissedChecklistItems, lockCharacter, acknowledgeBriefing, completeChecklist, updateWhiteboardState };
+  const value = { state, dispatch, eventLog: state.eventLog, updateCharacter, updateICS201, logEvent, updateCharacterCreationState, updateMissedChecklistItems, updateWhiteboardState, lockCharacter, acknowledgeBriefing, completeChecklist };
 
   return (
     <GameStateContext.Provider value={value}>
