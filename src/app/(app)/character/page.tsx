@@ -6,15 +6,19 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Label } from "@/components/ui/label";
 import { useGameState } from "@/hooks/use-game-state";
 import { useToast } from "@/hooks/use-toast";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import type { Character, CharacterCreationState } from "@/lib/game-state";
 import { Input } from "@/components/ui/input";
-import { Zap, Shield, Dices, Save, Award, GraduationCap, Ship, Anchor, CheckCircle } from "lucide-react";
+import { Zap, Shield, Dices, Save, Award, GraduationCap, Ship, Anchor, CheckCircle, Wand2, ArrowRight } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 const rollD6 = () => Math.floor(Math.random() * 6) + 1;
+const randomBool = () => Math.random() < 0.5;
+const randomInt = (max: number) => Math.floor(Math.random() * (max + 1));
 
 export default function CharacterPage() {
   const { state, updateCharacter, updateCharacterCreationState } = useGameState();
@@ -22,11 +26,13 @@ export default function CharacterPage() {
   const [creationState, setCreationState] = useState<CharacterCreationState>(state.characterCreation);
   const [unitName, setUnitName] = useState(state.character.unitName || '');
   
+  const router = useRouter();
   const { toast } = useToast();
 
   useEffect(() => {
     setCharacter(state.character);
     setCreationState(state.characterCreation);
+    setUnitName(state.character.unitName || '');
   }, [state.character, state.characterCreation]);
   
   const handleRoll = (field: 'skillRoll' | 'preparednessRoll') => {
@@ -68,6 +74,40 @@ export default function CharacterPage() {
     return { skill, preparedness, luck };
 
   }, [creationState]);
+
+  const generateRandomCharacter = useCallback(() => {
+    const randomCreationState: CharacterCreationState = {
+      qualification: randomBool() ? 'qualified' : 'unqualified',
+      skillRoll: rollD6(),
+      hasMarineSafetyPin: randomBool(),
+      isMSTHonorGrad: Math.random() < 0.2,
+      isOcsGrad: Math.random() < 0.1,
+      readiness: randomBool() ? 'allGreen' : 'notAllGreen',
+      preparednessRoll: rollD6(),
+      readinessMetricsNotGreen: randomInt(3),
+      involuntaryDeployments: randomInt(2),
+      lettersOfCommendation: randomInt(3),
+      achievementMedals: randomInt(2),
+      isRepoY: Math.random() < 0.1,
+      hasChallengeCoin: randomBool(),
+    };
+
+    setCharacter({
+        name: "Random Responder",
+        rank: "MST2",
+        skill: 0,
+        preparedness: 0,
+        luck: 0,
+        unitName: "Sector Hiatusport"
+    });
+    setUnitName("Sector Hiatusport");
+    setCreationState(randomCreationState);
+
+    toast({
+        title: "Random Responder Generated!",
+        description: "Review your new character's stats or save to continue."
+    });
+  }, [toast]);
   
   const handleSave = () => {
     const finalCharacter: Character = {
@@ -84,16 +124,24 @@ export default function CharacterPage() {
       title: "Character Saved",
       description: "Your stats have been updated successfully.",
     });
+    router.push('/dashboard');
   };
 
   return (
     <div className="max-w-4xl mx-auto">
       <Card>
         <CardHeader>
-          <CardTitle className="font-headline text-3xl">Responder Stat Sheet</CardTitle>
-          <CardDescription>
-            Answer the following questions to generate your character's stats based on your real-world experience.
-          </CardDescription>
+          <div className="flex justify-between items-start">
+            <div>
+              <CardTitle className="font-headline text-3xl">Responder Stat Sheet</CardTitle>
+              <CardDescription>
+                Answer the following questions to generate your character's stats or generate a random one.
+              </CardDescription>
+            </div>
+            <Button variant="outline" onClick={generateRandomCharacter}>
+              <Wand2 className="mr-2"/> Generate Random Responder
+            </Button>
+          </div>
         </CardHeader>
         <CardContent className="space-y-8 pt-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -105,7 +153,7 @@ export default function CharacterPage() {
                     <Label htmlFor="rank">Designation / Rank</Label>
                     <Input id="rank" value={character.rank} onChange={(e) => setCharacter(c => ({...c, rank: e.target.value}))} />
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-2 md:col-span-2">
                     <Label htmlFor="unitName">Unit Name</Label>
                     <Input id="unitName" value={unitName} onChange={(e) => setUnitName(e.target.value)} />
                 </div>
@@ -180,7 +228,7 @@ export default function CharacterPage() {
             <span>Luck: {luck}</span>
           </div>
           <Button onClick={handleSave}>
-            <Save className="mr-2"/> Save Character
+            <Save className="mr-2"/> Save and Continue to Dashboard <ArrowRight/>
           </Button>
         </CardFooter>
       </Card>

@@ -13,7 +13,7 @@ export default function LandingPage() {
           <h1 className="text-xl font-bold font-headline text-primary">Diesel Dilemma RPG</h1>
         </div>
         <Button asChild variant="ghost">
-          <Link href="/dashboard">Log In</Link>
+          <Link href="/character">Log In</Link>
         </Button>
       </header>
 
@@ -31,12 +31,12 @@ export default function LandingPage() {
               </p>
               <div className="flex flex-col sm:flex-row gap-4">
                 <Button asChild size="lg" className="font-bold">
-                  <Link href="/dashboard">
+                  <Link href="/character">
                     Start Training Now <ArrowRight className="ml-2" />
                   </Link>
                 </Button>
                 <Button asChild size="lg" variant="outline">
-                  <Link href="#">Learn More</Link>
+                  <Link href="/about">Learn More</Link>
                 </Button>
               </div>
             </div>
