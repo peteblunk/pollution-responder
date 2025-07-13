@@ -13,18 +13,20 @@ import { Zap, Shield, Dices, Save, Award, GraduationCap, Ship, Anchor, CheckCirc
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Lock } from "lucide-react";
 
 const rollD6 = () => Math.floor(Math.random() * 6) + 1;
 const randomBool = () => Math.random() < 0.5;
 const randomInt = (max: number) => Math.floor(Math.random() * (max + 1));
 
 export default function CharacterPage() {
-  const { state, updateCharacter, updateCharacterCreationState } = useGameState();
+  const { state, updateCharacter, updateCharacterCreationState, lockCharacter } = useGameState();
   const [character, setCharacter] = useState<Character>(state.character);
   const [creationState, setCreationState] = useState<CharacterCreationState>(state.characterCreation);
   const [unitName, setUnitName] = useState(state.character.unitName || '');
+  const isLocked = state.characterLocked;
   
   const router = useRouter();
   const { toast } = useToast();
@@ -36,12 +38,24 @@ export default function CharacterPage() {
   }, [state.character, state.characterCreation]);
   
   const handleRoll = (field: 'skillRoll' | 'preparednessRoll') => {
+      if (isLocked) return;
       setCreationState(s => ({...s, [field]: rollD6()}));
   }
 
   const handleNumericChange = (field: keyof CharacterCreationState, value: string) => {
+    if (isLocked) return;
     const numValue = parseInt(value, 10);
     setCreationState(s => ({...s, [field]: isNaN(numValue) ? 0 : numValue}));
+  }
+
+  const handleRadioChange = (field: keyof CharacterCreationState, value: string) => {
+    if (isLocked) return;
+    setCreationState(s => ({...s, [field]: value as any, skillRoll: 0, preparednessRoll: 0}));
+  }
+  
+  const handleCheckboxChange = (field: keyof CharacterCreationState, checked: boolean) => {
+    if (isLocked) return;
+    setCreationState(s => ({...s, [field]: checked}));
   }
 
   const { skill, preparedness, luck } = useMemo(() => {
@@ -76,6 +90,7 @@ export default function CharacterPage() {
   }, [creationState]);
 
   const generateRandomCharacter = useCallback(() => {
+    if (isLocked) return;
     const randomCreationState: CharacterCreationState = {
       qualification: randomBool() ? 'qualified' : 'unqualified',
       skillRoll: rollD6(),
@@ -107,9 +122,10 @@ export default function CharacterPage() {
         title: "Random Responder Generated!",
         description: "Review your new character's stats or save to continue."
     });
-  }, [toast]);
+  }, [isLocked, toast]);
   
   const handleSave = () => {
+    if (isLocked) return;
     const finalCharacter: Character = {
       name: character.name,
       unitName: unitName,
@@ -120,9 +136,10 @@ export default function CharacterPage() {
     };
     updateCharacter(finalCharacter);
     updateCharacterCreationState(creationState);
+    lockCharacter();
     toast({
-      title: "Character Saved",
-      description: "Your stats have been updated successfully.",
+      title: "Character Saved & Locked",
+      description: "Your stats have been finalized. Time to start the scenario!",
     });
     router.push('/dashboard');
   };
@@ -135,27 +152,40 @@ export default function CharacterPage() {
             <div>
               <CardTitle className="font-headline text-3xl">Responder Stat Sheet</CardTitle>
               <CardDescription>
-                Answer the following questions to generate your character's stats or generate a random one.
+                {isLocked
+                  ? "Your character sheet is locked. View your stats below."
+                  : "Answer the questions to generate your stats or create a random one."}
               </CardDescription>
             </div>
-            <Button variant="outline" onClick={generateRandomCharacter}>
-              <Wand2 className="mr-2"/> Generate Random Responder
-            </Button>
+            {!isLocked && (
+              <Button variant="outline" onClick={generateRandomCharacter}>
+                <Wand2 className="mr-2"/> Generate Random Responder
+              </Button>
+            )}
           </div>
         </CardHeader>
         <CardContent className="space-y-8 pt-4">
+            {isLocked && (
+              <Alert variant="default" className="border-primary/50 text-primary-foreground bg-primary/90">
+                <Lock className="h-4 w-4 !text-primary-foreground" />
+                <AlertTitle>Character Locked</AlertTitle>
+                <AlertDescription className="!text-primary-foreground/80">
+                  Your character has been finalized. To create a new character, please logout and start over.
+                </AlertDescription>
+              </Alert>
+            )}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                     <Label htmlFor="name">Name</Label>
-                    <Input id="name" value={character.name} onChange={(e) => setCharacter(c => ({...c, name: e.target.value}))} />
+                    <Input id="name" value={character.name} onChange={(e) => setCharacter(c => ({...c, name: e.target.value}))} disabled={isLocked} />
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="rank">Designation / Rank</Label>
-                    <Input id="rank" value={character.rank} onChange={(e) => setCharacter(c => ({...c, rank: e.target.value}))} />
+                    <Input id="rank" value={character.rank} onChange={(e) => setCharacter(c => ({...c, rank: e.target.value}))} disabled={isLocked} />
                 </div>
                 <div className="space-y-2 md:col-span-2">
                     <Label htmlFor="unitName">Unit Name</Label>
-                    <Input id="unitName" value={unitName} onChange={(e) => setUnitName(e.target.value)} />
+                    <Input id="unitName" value={unitName} onChange={(e) => setUnitName(e.target.value)} disabled={isLocked}/>
                 </div>
             </div>
 
@@ -166,19 +196,19 @@ export default function CharacterPage() {
               <h3 className="flex items-center gap-2 text-xl font-headline"><Zap className="text-primary"/> Skill (Operational Proficiency)</h3>
               <div className="p-4 border rounded-lg space-y-4 bg-muted/20">
                 <Label>Pollution Responder Qualification</Label>
-                <RadioGroup value={creationState.qualification} onValueChange={(v) => setCreationState(s => ({...s, qualification: v as any, skillRoll: 0}))}>
+                <RadioGroup value={creationState.qualification} onValueChange={(v) => handleRadioChange('qualification', v)} disabled={isLocked}>
                   <div className="flex items-center space-x-2"><RadioGroupItem value="qualified" id="q-qual" /><Label htmlFor="q-qual">Qualified Pollution Responder</Label></div>
                   <div className="flex items-center space-x-2"><RadioGroupItem value="unqualified" id="q-unqual" /><Label htmlFor="q-unqual">Unqualified Pollution Responder</Label></div>
                 </RadioGroup>
                 <div className="flex items-center gap-4">
-                  <Button onClick={() => handleRoll('skillRoll')}>Roll 1d6</Button>
+                  <Button onClick={() => handleRoll('skillRoll')} disabled={isLocked}>Roll 1d6</Button>
                   {creationState.skillRoll > 0 && <p>Base: {creationState.qualification === 'qualified' ? '3 + ' : ''}{creationState.skillRoll} = <strong>{creationState.qualification === 'qualified' ? 3 + creationState.skillRoll : creationState.skillRoll}</strong></p>}
                 </div>
                 <Label>Adjustments</Label>
                 <div className="space-y-2 pl-2">
-                  <div className="flex items-center space-x-2"><Checkbox id="pin" checked={creationState.hasMarineSafetyPin} onCheckedChange={c => setCreationState(s => ({...s, hasMarineSafetyPin: !!c}))} /><Label htmlFor="pin" className="font-normal flex items-center gap-2"><Award className="w-4 h-4 text-muted-foreground"/> Marine Safety Pin (+1)</Label></div>
-                  <div className="flex items-center space-x-2"><Checkbox id="honor" checked={creationState.isMSTHonorGrad} onCheckedChange={c => setCreationState(s => ({...s, isMSTHonorGrad: !!c}))} /><Label htmlFor="honor" className="font-normal flex items-center gap-2"><GraduationCap className="w-4 h-4 text-muted-foreground"/> MST "A" School Honor Graduate (+1)</Label></div>
-                  <div className="flex items-center space-x-2"><Checkbox id="ocs" checked={creationState.isOcsGrad} onCheckedChange={c => setCreationState(s => ({...s, isOcsGrad: !!c}))} /><Label htmlFor="ocs" className="font-normal flex items-center gap-2"><GraduationCap className="w-4 h-4 text-muted-foreground"/> OCS Grad (-1 Skill, +1 Preparedness)</Label></div>
+                  <div className="flex items-center space-x-2"><Checkbox id="pin" checked={creationState.hasMarineSafetyPin} onCheckedChange={c => handleCheckboxChange('hasMarineSafetyPin', !!c)} disabled={isLocked} /><Label htmlFor="pin" className="font-normal flex items-center gap-2"><Award className="w-4 h-4 text-muted-foreground"/> Marine Safety Pin (+1)</Label></div>
+                  <div className="flex items-center space-x-2"><Checkbox id="honor" checked={creationState.isMSTHonorGrad} onCheckedChange={c => handleCheckboxChange('isMSTHonorGrad', !!c)} disabled={isLocked} /><Label htmlFor="honor" className="font-normal flex items-center gap-2"><GraduationCap className="w-4 h-4 text-muted-foreground"/> MST "A" School Honor Graduate (+1)</Label></div>
+                  <div className="flex items-center space-x-2"><Checkbox id="ocs" checked={creationState.isOcsGrad} onCheckedChange={c => handleCheckboxChange('isOcsGrad', !!c)} disabled={isLocked} /><Label htmlFor="ocs" className="font-normal flex items-center gap-2"><GraduationCap className="w-4 h-4 text-muted-foreground"/> OCS Grad (-1 Skill, +1 Preparedness)</Label></div>
                 </div>
               </div>
             </div>
@@ -188,18 +218,18 @@ export default function CharacterPage() {
               <h3 className="flex items-center gap-2 text-xl font-headline"><Shield className="text-primary"/> Preparedness (Foresight & Readiness)</h3>
               <div className="p-4 border rounded-lg space-y-4 bg-muted/20">
                 <Label>Readiness Status</Label>
-                <RadioGroup value={creationState.readiness} onValueChange={(v) => setCreationState(s => ({...s, readiness: v as any, preparednessRoll: 0, readinessMetricsNotGreen: 0}))}>
+                <RadioGroup value={creationState.readiness} onValueChange={(v) => handleRadioChange('readiness', v)} disabled={isLocked}>
                   <div className="flex items-center space-x-2"><RadioGroupItem value="allGreen" id="r-green" /><Label htmlFor="r-green">All Readiness Metrics "Green"</Label></div>
                   <div className="flex items-center space-x-2"><RadioGroupItem value="notAllGreen" id="r-notgreen" /><Label htmlFor="r-notgreen">Not All Metrics "Green"</Label></div>
                 </RadioGroup>
                 {creationState.readiness === 'notAllGreen' && (
                     <div className="pl-6 space-y-2">
                          <Label htmlFor="readiness-metrics">How many metrics are not "Green"? (-1 each)</Label>
-                         <Input id="readiness-metrics" type="number" min="0" className="w-24" value={creationState.readinessMetricsNotGreen} onChange={(e) => handleNumericChange('readinessMetricsNotGreen', e.target.value)} />
+                         <Input id="readiness-metrics" type="number" min="0" className="w-24" value={creationState.readinessMetricsNotGreen} onChange={(e) => handleNumericChange('readinessMetricsNotGreen', e.target.value)} disabled={isLocked} />
                     </div>
                 )}
                 <div className="flex items-center gap-4">
-                  <Button onClick={() => handleRoll('preparednessRoll')}>Roll 1d6</Button>
+                  <Button onClick={() => handleRoll('preparednessRoll')} disabled={isLocked}>Roll 1d6</Button>
                   {creationState.preparednessRoll > 0 && <p>Base: {creationState.readiness === 'allGreen' ? '2 + ' : ''}{creationState.preparednessRoll} = <strong>{creationState.readiness === 'allGreen' ? 2 + creationState.preparednessRoll : creationState.preparednessRoll}</strong></p>}
                 </div>
               </div>
@@ -210,13 +240,13 @@ export default function CharacterPage() {
               <h3 className="flex items-center gap-2 text-xl font-headline"><Dices className="text-primary"/> Luck (Serendipity & Fortune)</h3>
               <div className="p-4 border rounded-lg space-y-4 bg-muted/20">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2"><Label htmlFor="deployments" className="flex items-center gap-2"><Ship className="w-4 h-4 text-muted-foreground"/> Involuntary Deployments (+1 each)</Label><Input id="deployments" type="number" min="0" value={creationState.involuntaryDeployments} onChange={(e) => handleNumericChange('involuntaryDeployments', e.target.value)}/></div>
-                  <div className="space-y-2"><Label htmlFor="loc" className="flex items-center gap-2"><Award className="w-4 h-4 text-muted-foreground"/> Letters of Commendation (+1 each)</Label><Input id="loc" type="number" min="0" value={creationState.lettersOfCommendation} onChange={(e) => handleNumericChange('lettersOfCommendation', e.target.value)} /></div>
-                  <div className="space-y-2"><Label htmlFor="cgam" className="flex items-center gap-2"><Award className="w-4 h-4 text-muted-foreground"/> CG Achievement Medals (+2 each)</Label><Input id="cgam" type="number" min="0" value={creationState.achievementMedals} onChange={(e) => handleNumericChange('achievementMedals', e.target.value)} /></div>
+                  <div className="space-y-2"><Label htmlFor="deployments" className="flex items-center gap-2"><Ship className="w-4 h-4 text-muted-foreground"/> Involuntary Deployments (+1 each)</Label><Input id="deployments" type="number" min="0" value={creationState.involuntaryDeployments} onChange={(e) => handleNumericChange('involuntaryDeployments', e.target.value)} disabled={isLocked}/></div>
+                  <div className="space-y-2"><Label htmlFor="loc" className="flex items-center gap-2"><Award className="w-4 h-4 text-muted-foreground"/> Letters of Commendation (+1 each)</Label><Input id="loc" type="number" min="0" value={creationState.lettersOfCommendation} onChange={(e) => handleNumericChange('lettersOfCommendation', e.target.value)} disabled={isLocked} /></div>
+                  <div className="space-y-2"><Label htmlFor="cgam" className="flex items-center gap-2"><Award className="w-4 h-4 text-muted-foreground"/> CG Achievement Medals (+2 each)</Label><Input id="cgam" type="number" min="0" value={creationState.achievementMedals} onChange={(e) => handleNumericChange('achievementMedals', e.target.value)} disabled={isLocked} /></div>
                 </div>
                 <div className="space-y-2 pt-2">
-                    <div className="flex items-center space-x-2"><Checkbox id="repoy" checked={creationState.isRepoY} onCheckedChange={c => setCreationState(s => ({...s, isRepoY: !!c}))} /><Label htmlFor="repoy" className="font-normal flex items-center gap-2"><Anchor className="w-4 h-4 text-muted-foreground"/> Sector Puget Sound REPOY (+2)</Label></div>
-                    <div className="flex items-center space-x-2"><Checkbox id="coin" checked={creationState.hasChallengeCoin} onCheckedChange={c => setCreationState(s => ({...s, hasChallengeCoin: !!c}))} /><Label htmlFor="coin" className="font-normal flex items-center gap-2"><CheckCircle className="w-4 h-4 text-muted-foreground"/> Holder of Sector Puget Sound Reserve Team 2 Challenge Coin (+1)</Label></div>
+                    <div className="flex items-center space-x-2"><Checkbox id="repoy" checked={creationState.isRepoY} onCheckedChange={c => handleCheckboxChange('isRepoY', !!c)} disabled={isLocked} /><Label htmlFor="repoy" className="font-normal flex items-center gap-2"><Anchor className="w-4 h-4 text-muted-foreground"/> Sector Puget Sound REPOY (+2)</Label></div>
+                    <div className="flex items-center space-x-2"><Checkbox id="coin" checked={creationState.hasChallengeCoin} onCheckedChange={c => handleCheckboxChange('hasChallengeCoin', !!c)} disabled={isLocked} /><Label htmlFor="coin" className="font-normal flex items-center gap-2"><CheckCircle className="w-4 h-4 text-muted-foreground"/> Holder of Sector Puget Sound Reserve Team 2 Challenge Coin (+1)</Label></div>
                 </div>
               </div>
             </div>
@@ -227,9 +257,11 @@ export default function CharacterPage() {
             <span>Preparedness: {preparedness}</span>
             <span>Luck: {luck}</span>
           </div>
-          <Button onClick={handleSave}>
-            <Save className="mr-2"/> Save and Continue to Dashboard <ArrowRight/>
-          </Button>
+          {!isLocked && (
+            <Button onClick={handleSave}>
+              <Save className="mr-2"/> Save and Continue to Dashboard <ArrowRight/>
+            </Button>
+          )}
         </CardFooter>
       </Card>
     </div>

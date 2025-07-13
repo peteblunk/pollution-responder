@@ -11,7 +11,8 @@ type GameStateAction =
   | { type: 'UPDATE_ICS201'; payload: ICS201 }
   | { type: 'LOG_EVENT'; payload: string }
   | { type: 'UPDATE_CHARACTER_CREATION'; payload: CharacterCreationState }
-  | { type: 'UPDATE_MISSED_CHECKLIST_ITEMS'; payload: string[] };
+  | { type: 'UPDATE_MISSED_CHECKLIST_ITEMS'; payload: string[] }
+  | { type: 'LOCK_CHARACTER' };
 
 const GameStateContext = createContext<{
   state: GameState;
@@ -22,6 +23,7 @@ const GameStateContext = createContext<{
   logEvent: (event: string) => void;
   updateCharacterCreationState: (creationState: CharacterCreationState) => void;
   updateMissedChecklistItems: (items: string[]) => void;
+  lockCharacter: () => void;
 } | undefined>(undefined);
 
 const gameStateReducer = (state: GameState, action: GameStateAction): GameState => {
@@ -38,6 +40,8 @@ const gameStateReducer = (state: GameState, action: GameStateAction): GameState 
         return { ...state, characterCreation: action.payload };
     case 'UPDATE_MISSED_CHECKLIST_ITEMS':
         return { ...state, missedChecklistItems: action.payload };
+    case 'LOCK_CHARACTER':
+        return { ...state, characterLocked: true };
     default:
       return state;
   }
@@ -87,7 +91,11 @@ export const GameStateProvider = ({ children }: { children: ReactNode }) => {
       dispatch({ type: 'UPDATE_MISSED_CHECKLIST_ITEMS', payload: items });
   }, []);
   
-  const value = { state, dispatch, eventLog: state.eventLog, updateCharacter, updateICS201, logEvent, updateCharacterCreationState, updateMissedChecklistItems };
+  const lockCharacter = useCallback(() => {
+      dispatch({ type: 'LOCK_CHARACTER' });
+  }, []);
+
+  const value = { state, dispatch, eventLog: state.eventLog, updateCharacter, updateICS201, logEvent, updateCharacterCreationState, updateMissedChecklistItems, lockCharacter };
 
   return (
     <GameStateContext.Provider value={value}>

@@ -44,6 +44,7 @@ export interface GameState {
   currentScenarioId: string;
   eventLog: string[];
   missedChecklistItems: string[];
+  characterLocked: boolean;
 }
 
 const today = new Date();
@@ -86,4 +87,5 @@ export const initialState: GameState = {
   currentScenarioId: "start",
   eventLog: ["08:02 - Game started. Initial scenario loaded."],
   missedChecklistItems: [],
+  characterLocked: false,
 };
