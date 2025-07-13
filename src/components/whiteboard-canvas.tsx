@@ -58,7 +58,7 @@ export function WhiteboardCanvas() {
   const [isTyping, setIsTyping] = useState(false);
   const [textYOffset, setTextYOffset] = useState(40);
   
-  const [missedItems, setMissedItems] = useState<string[]>([]);
+  const [rememberedItems, setRememberedItems] = useState<string[]>([]);
   const [assessmentStep, setAssessmentStep] = useState<AssessmentStep>('honor');
   const { updateMissedChecklistItems } = useGameState();
 
@@ -230,16 +230,19 @@ export function WhiteboardCanvas() {
       }
   }
 
-  const onMissedItemChange = (itemId: string, checked: boolean) => {
-      setMissedItems(prev => checked ? [...prev, itemId] : prev.filter(id => id !== itemId));
+  const onRememberedItemChange = (itemId: string, checked: boolean) => {
+      setRememberedItems(prev => checked ? [...prev, itemId] : prev.filter(id => id !== itemId));
   }
   
   const handleReturnToDashboard = () => {
-    updateMissedChecklistItems(missedItems);
+    const missedRequired = requiredItems.filter(item => !rememberedItems.includes(item.id));
+    const allMissed = missedRequired.map(i => i.id); // For now, only required items cause a penalty.
+    updateMissedChecklistItems(allMissed);
   }
 
   const minutes = Math.floor(timeLeft / 60);
   const seconds = timeLeft % 60;
+  const missedCount = requiredItems.length - rememberedItems.filter(id => requiredItems.some(req => req.id === id)).length;
 
   return (
     <div className='h-full w-full flex flex-col gap-2'>
@@ -318,7 +321,7 @@ export function WhiteboardCanvas() {
                                        <strong className="font-bold text-uscg-red">Honor</strong>, Respect, Devotion to Duty
                                    </AlertTitle>
                                    <AlertDescription className="text-uscg-red/80">
-                                       The effectiveness of this training relies on your honest self-assessment. Be truthful about what you missed as we review your list.
+                                       The effectiveness of this training relies on your honest self-assessment. Be truthful about what you remembered as we review your list.
                                    </AlertDescription>
                                </Alert>
                            </CardContent>
@@ -334,21 +337,21 @@ export function WhiteboardCanvas() {
                        <Card className="flex flex-col h-full">
                            <CardHeader>
                                <CardTitle className="font-headline text-2xl flex items-center gap-2"><ShieldQuestion/> Self-Assessment</CardTitle>
-                               <CardDescription>Review your list. For each item or action you missed, check the box.</CardDescription>
+                               <CardDescription>Review your list. Check the box for each item you remembered.</CardDescription>
                            </CardHeader>
                            <CardContent className="flex-grow overflow-hidden">
                                <ScrollArea className="h-full pr-4">
                                     <div className="space-y-4">
                                         <div className='p-2 rounded-md bg-muted/50 text-center mb-4'>
                                             <p className='text-muted-foreground'>
-                                                <strong className='text-uscg-red font-bold'>Honor</strong>, Respect, Devotion to Duty
+                                                <strong className='font-bold text-uscg-red'>Honor</strong>, Respect, Devotion to Duty
                                             </p>
                                         </div>
                                         <h4 className="font-bold mb-2">Required Items & Actions</h4>
                                         <div className="space-y-2">
                                         {requiredItems.map(item => (
                                             <div key={item.id} className="flex items-center space-x-2">
-                                                <Checkbox id={item.id} onCheckedChange={(checked) => onMissedItemChange(item.id, !!checked)} />
+                                                <Checkbox id={item.id} onCheckedChange={(checked) => onRememberedItemChange(item.id, !!checked)} />
                                                 <Label htmlFor={item.id} className="font-normal text-sm">{item.label}</Label>
                                             </div>
                                         ))}
@@ -358,7 +361,7 @@ export function WhiteboardCanvas() {
                                         <div className="space-y-2">
                                         {bonusItems.map(item => (
                                             <div key={item.id} className="flex items-center space-x-2">
-                                                <Checkbox id={item.id} onCheckedChange={(checked) => onMissedItemChange(item.id, !!checked)} />
+                                                <Checkbox id={item.id} onCheckedChange={(checked) => onRememberedItemChange(item.id, !!checked)} />
                                                 <Label htmlFor={item.id} className="font-normal text-sm">{item.label}</Label>
                                             </div>
                                         ))}
@@ -368,7 +371,7 @@ export function WhiteboardCanvas() {
                            </CardContent>
                            <CardFooter className='pt-4 border-t'>
                                <Button className="w-full" asChild onClick={handleReturnToDashboard}>
-                                   <Link href="/dashboard">Return to Dashboard ({missedItems.length} missed)</Link>
+                                   <Link href="/dashboard">Return to Dashboard ({missedCount > 0 ? `${missedCount} missed` : "All clear!"})</Link>
                                </Button>
                            </CardFooter>
                        </Card>
