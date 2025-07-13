@@ -252,7 +252,7 @@ export function WhiteboardCanvas() {
             </div>
         )}
         <div className="flex-grow w-full min-h-0 rounded-md border overflow-hidden relative grid grid-cols-1 md:grid-cols-2 md:gap-4 bg-card p-2">
-            <div className={cn("w-full h-full bg-white relative", !timerActive && 'opacity-60 pointer-events-none')}>
+            <div className={cn("w-full h-full bg-white relative", !timerActive && 'opacity-60 pointer-events-none col-span-1')}>
                 <canvas
                     ref={canvasRef}
                     onMouseDown={startDrawing}
@@ -264,7 +264,7 @@ export function WhiteboardCanvas() {
             </div>
 
             {isTyping && timerActive && (
-                <div className="absolute inset-2 flex flex-col gap-2 bg-background/90 p-4 rounded-lg border z-10">
+                <div className="absolute inset-2 left-1/2 -translate-x-1/2 md:left-auto md:translate-x-0 md:w-1/3 flex flex-col gap-2 bg-background/90 p-4 rounded-lg border z-10 w-full max-w-md">
                     <Label htmlFor="text-input" className='font-headline'>Enter your checklist text below. Click "Add Text to Whiteboard" when finished.</Label>
                     <Textarea 
                         ref={textareaRef}
@@ -280,7 +280,7 @@ export function WhiteboardCanvas() {
             )}
             
             {!timerActive && (
-               <div className="w-full shadow-lg flex flex-col h-full max-h-[calc(100vh-200px)]">
+               <div className="w-full shadow-lg flex flex-col h-full max-h-[calc(100vh-200px)] col-span-1">
                    {assessmentStep === 'honor' && (
                        <Card className="m-auto">
                            <CardHeader>
@@ -353,5 +353,3 @@ export function WhiteboardCanvas() {
     </div>
   );
 }
-
-    
