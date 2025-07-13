@@ -47,6 +47,7 @@ export interface GameState {
   characterLocked: boolean;
   briefingAcknowledged: boolean;
   checklistComplete: boolean;
+  whiteboardState: string;
 }
 
 const today = new Date();
@@ -92,4 +93,5 @@ export const initialState: GameState = {
   characterLocked: false,
   briefingAcknowledged: false,
   checklistComplete: false,
+  whiteboardState: "",
 };

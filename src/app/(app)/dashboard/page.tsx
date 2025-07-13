@@ -11,6 +11,7 @@ import Link from "next/link";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { useEffect, useState } from "react";
+import { PreDepartureChecklist } from "@/components/pre-departure-checklist";
 
 const requiredItemsIds = ['ppe', 'equipment', 'clothing', 'sample-kit', 'paperwork', 'other', 'calls', 'jurisdiction'];
 
@@ -115,67 +116,56 @@ export default function DashboardPage() {
   return (
     <div className="grid gap-6 lg:grid-cols-3">
       <div className="lg:col-span-2 space-y-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="font-headline text-2xl flex items-center gap-2"><BellRing className="text-destructive"/> Phase 0: Office Briefing & Departure Prep</CardTitle>
-            <CardDescription>
-              1000 Hours - The call just came in: 'Potential diesel fuel leak from a vessel moored at Pier 3 at a Marina in Smuggler’s Cove on the Kitsap Peninsula.'
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {!state.checklistComplete ? (
-                <>
-                    <p className="text-base">
-                      Before you even step out the door, you need to be prepared. What's your quick checklist of things you need to confirm or do before you leave the office?
-                    </p>
-                    <div className="mt-6 p-4 border rounded-lg bg-muted/30">
-                        <h4 className="font-headline text-lg flex items-center gap-2 mb-3"><ClipboardCheck/> Pre-Departure Checklist</h4>
-                        <p className="text-sm mb-4">
-                            You take a moment to consider potential pre-departure hazards and plan your loadout. Use the whiteboard to make a checklist of everything you will need. You have four minutes.
-                        </p>
-                        <Button asChild>
-                            <Link href="/whiteboard"><Edit3 className="mr-2"/> Open Whiteboard</Link>
-                        </Button>
-                    </div>
-                </>
-            ) : (
-                <Alert>
-                    <CheckSquare className="h-4 w-4"/>
-                    <AlertTitle>Checklist Complete</AlertTitle>
-                    <AlertDescription>You've finalized your preparations. Time to see if you're ready for the road.</AlertDescription>
-                </Alert>
-            )}
-          </CardContent>
-        </Card>
         
-        <Card>
-            <CardHeader>
-                <CardTitle className="font-headline">Pre-Departure Actions & Rolls</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-                <div className="flex flex-wrap items-center justify-between gap-4 p-3 border rounded-lg">
-                    <div>
-                        <h4 className="font-medium flex items-center gap-2"><Phone/>Duty Sup Check-in</h4>
-                        <p className="text-sm text-muted-foreground">Report your departure and initial intentions.</p>
-                    </div>
-                    <Button onClick={() => logEvent("Successfully checked in with Duty Supervisor.")}>Check In</Button>
-                </div>
-                 <div className="flex flex-wrap items-center justify-between gap-4 p-3 border rounded-lg">
-                    <div>
-                        <h4 className="font-medium flex items-center gap-2"><CheckSquare/>Sample Kit Check</h4>
-                        <p className="text-sm text-muted-foreground">Confirm your sample kit is fully stocked.</p>
-                    </div>
-                    <DiceRoller sides={12} onRoll={(roll) => logEvent(`Rolled a ${roll} on Sample Kit check (2d6, using d12 for simplicity).`)}>Roll Preparedness</DiceRoller>
-                </div>
-                 <div className="flex flex-wrap items-center justify-between gap-4 p-3 border rounded-lg">
-                    <div>
-                        <h4 className="font-medium flex items-center gap-2"><Ship/>Drive to Ferry</h4>
-                        <p className="text-sm text-muted-foreground">Time to head out. Let's hope you don't forget anything.</p>
-                    </div>
-                    <DiceRoller sides={12} onRoll={(roll) => logEvent(`Rolled a ${roll} for departure (Luck/Preparedness).`)}>Roll for Departure</DiceRoller>
-                </div>
-            </CardContent>
-        </Card>
+        {!state.checklistComplete ? (
+            <PreDepartureChecklist />
+        ) : (
+            <>
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="font-headline text-2xl flex items-center gap-2"><BellRing className="text-destructive"/> Phase 0: Office Briefing & Departure Prep</CardTitle>
+                    <CardDescription>
+                      1000 Hours - The call just came in: 'Potential diesel fuel leak from a vessel moored at Pier 3 at a Marina in Smuggler’s Cove on the Kitsap Peninsula.'
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Alert>
+                        <CheckSquare className="h-4 w-4"/>
+                        <AlertTitle>Checklist Complete</AlertTitle>
+                        <AlertDescription>You've finalized your preparations. Time to see if you're ready for the road.</AlertDescription>
+                    </Alert>
+                  </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="font-headline">Pre-Departure Actions & Rolls</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <div className="flex flex-wrap items-center justify-between gap-4 p-3 border rounded-lg">
+                            <div>
+                                <h4 className="font-medium flex items-center gap-2"><Phone/>Duty Sup Check-in</h4>
+                                <p className="text-sm text-muted-foreground">Report your departure and initial intentions.</p>
+                            </div>
+                            <Button onClick={() => logEvent("Successfully checked in with Duty Supervisor.")}>Check In</Button>
+                        </div>
+                         <div className="flex flex-wrap items-center justify-between gap-4 p-3 border rounded-lg">
+                            <div>
+                                <h4 className="font-medium flex items-center gap-2"><CheckSquare/>Sample Kit Check</h4>
+                                <p className="text-sm text-muted-foreground">Confirm your sample kit is fully stocked.</p>
+                            </div>
+                            <DiceRoller sides={12} onRoll={(roll) => logEvent(`Rolled a ${roll} on Sample Kit check (2d6, using d12 for simplicity).`)}>Roll Preparedness</DiceRoller>
+                        </div>
+                         <div className="flex flex-wrap items-center justify-between gap-4 p-3 border rounded-lg">
+                            <div>
+                                <h4 className="font-medium flex items-center gap-2"><Ship/>Drive to Ferry</h4>
+                                <p className="text-sm text-muted-foreground">Time to head out. Let's hope you don't forget anything.</p>
+                            </div>
+                            <DiceRoller sides={12} onRoll={(roll) => logEvent(`Rolled a ${roll} for departure (Luck/Preparedness).`)}>Roll for Departure</DiceRoller>
+                        </div>
+                    </CardContent>
+                </Card>
+            </>
+        )}
         
         <Card>
             <CardHeader>
