@@ -83,8 +83,8 @@ export function WhiteboardCanvas() {
     context.fillText(line, x, currentY);
     return currentY + lineHeight;
   };
-
-  const drawTextFromArea = (andClose = true) => {
+  
+  const drawTextFromArea = async (andClose = true) => {
       const textarea = textareaRef.current;
       const canvas = canvasRef.current;
       if (!contextRef.current || !textarea || !textarea.value || !canvas) {
@@ -94,6 +94,9 @@ export function WhiteboardCanvas() {
           }
           return;
       };
+      
+      // Wait for the font to be loaded before trying to use it
+      await document.fonts.ready;
       
       contextRef.current.fillStyle = color;
       contextRef.current.font = '24px "Gochi Hand"';
@@ -135,20 +138,32 @@ export function WhiteboardCanvas() {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const dpr = window.devicePixelRatio || 1;
-    const rect = canvas.parentElement!.getBoundingClientRect();
-    canvas.width = rect.width * dpr;
-    canvas.height = canvasHeight * dpr;
-
-    const context = canvas.getContext('2d');
-    if(!context) return;
+    // Use a variable to track if the component is still mounted
+    let isMounted = true;
     
-    context.scale(dpr, dpr);
-    context.lineCap = 'round';
-    context.strokeStyle = color;
-    context.lineWidth = lineWidth;
-    context.fillStyle = color;
-    contextRef.current = context;
+    const setCanvasDimensions = () => {
+        if (!canvas || !canvas.parentElement || !isMounted) return;
+        const dpr = window.devicePixelRatio || 1;
+        const rect = canvas.parentElement!.getBoundingClientRect();
+        canvas.width = rect.width * dpr;
+        canvas.height = canvasHeight * dpr;
+
+        const context = canvas.getContext('2d');
+        if(!context) return;
+        
+        context.scale(dpr, dpr);
+        context.lineCap = 'round';
+        context.strokeStyle = color;
+        context.lineWidth = lineWidth;
+        context.fillStyle = color;
+        contextRef.current = context;
+    };
+    
+    setCanvasDimensions();
+
+    return () => {
+      isMounted = false;
+    }
 
   }, [canvasHeight, color, lineWidth]);
   
