@@ -12,6 +12,7 @@ type GameStateAction =
   | { type: 'LOG_EVENT'; payload: string }
   | { type: 'UPDATE_CHARACTER_CREATION'; payload: CharacterCreationState }
   | { type: 'UPDATE_MISSED_CHECKLIST_ITEMS'; payload: string[] }
+  | { type: 'UPDATE_WHITEBOARD_STATE'; payload: string }
   | { type: 'LOCK_CHARACTER' }
   | { type: 'ACKNOWLEDGE_BRIEFING' }
   | { type: 'COMPLETE_CHECKLIST' };
@@ -25,6 +26,7 @@ const GameStateContext = createContext<{
   logEvent: (event: string) => void;
   updateCharacterCreationState: (creationState: CharacterCreationState) => void;
   updateMissedChecklistItems: (items: string[]) => void;
+  updateWhiteboardState: (whiteboardState: string) => void;
   lockCharacter: () => void;
   acknowledgeBriefing: () => void;
   completeChecklist: () => void;
@@ -44,6 +46,8 @@ const gameStateReducer = (state: GameState, action: GameStateAction): GameState 
         return { ...state, characterCreation: action.payload };
     case 'UPDATE_MISSED_CHECKLIST_ITEMS':
         return { ...state, missedChecklistItems: action.payload };
+    case 'UPDATE_WHITEBOARD_STATE':
+        return { ...state, whiteboardState: action.payload };
     case 'LOCK_CHARACTER':
         return { ...state, characterLocked: true };
     case 'ACKNOWLEDGE_BRIEFING':
@@ -98,6 +102,10 @@ export const GameStateProvider = ({ children }: { children: ReactNode }) => {
   const updateMissedChecklistItems = useCallback((items: string[]) => {
       dispatch({ type: 'UPDATE_MISSED_CHECKLIST_ITEMS', payload: items });
   }, []);
+
+  const updateWhiteboardState = useCallback((whiteboardState: string) => {
+    dispatch({ type: 'UPDATE_WHITEBOARD_STATE', payload: whiteboardState });
+  }, []);
   
   const lockCharacter = useCallback(() => {
       dispatch({ type: 'LOCK_CHARACTER' });
@@ -111,7 +119,7 @@ export const GameStateProvider = ({ children }: { children: ReactNode }) => {
       dispatch({ type: 'COMPLETE_CHECKLIST' });
   }, []);
 
-  const value = { state, dispatch, eventLog: state.eventLog, updateCharacter, updateICS201, logEvent, updateCharacterCreationState, updateMissedChecklistItems, lockCharacter, acknowledgeBriefing, completeChecklist };
+  const value = { state, dispatch, eventLog: state.eventLog, updateCharacter, updateICS201, logEvent, updateCharacterCreationState, updateMissedChecklistItems, updateWhiteboardState, lockCharacter, acknowledgeBriefing, completeChecklist };
 
   return (
     <GameStateContext.Provider value={value}>
