@@ -12,7 +12,6 @@ export default {
       fontFamily: {
         body: ['PT Sans', 'sans-serif'],
         headline: ['Space Grotesk', 'sans-serif'],
-        handwritten: ['"Gochi Hand"', 'cursive'],
         code: ['monospace'],
       },
       colors: {
@@ -100,5 +99,3 @@ export default {
   },
   plugins: [require('tailwindcss-animate')],
 } satisfies Config;
-
-    

@@ -95,15 +95,13 @@ export function WhiteboardCanvas() {
           return;
       };
       
-      await document.fonts.ready;
-      
       const dpr = window.devicePixelRatio || 1;
       const maxWidth = canvas.width / dpr - 40;
-      const lineHeight = 30;
+      const lineHeight = 32; // Corresponds to font size
       const x = 20;
 
       contextRef.current.fillStyle = color;
-      contextRef.current.font = '24px "Gochi Hand"';
+      contextRef.current.font = 'bold 28px sans-serif';
 
       const lines = textarea.value.split('\n');
 
@@ -341,7 +339,7 @@ export function WhiteboardCanvas() {
                     <Textarea 
                         ref={textareaRef}
                         id="text-input"
-                        className="flex-grow bg-white/80 font-handwritten"
+                        className="flex-grow bg-white/80"
                         placeholder='- PPE (gloves, hard hat...)'
                     />
                     <div className='flex justify-end gap-2'>
@@ -425,5 +423,3 @@ export function WhiteboardCanvas() {
     </div>
   );
 }
-
-    
