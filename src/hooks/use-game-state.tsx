@@ -15,7 +15,10 @@ type GameStateAction =
   | { type: 'UPDATE_WHITEBOARD_STATE'; payload: string }
   | { type: 'LOCK_CHARACTER' }
   | { type: 'ACKNOWLEDGE_BRIEFING' }
-  | { type: 'COMPLETE_CHECKLIST' };
+  | { type: 'COMPLETE_CHECKLIST' }
+  | { type: 'SET_PROMPT_QUEUE'; payload: string[] }
+  | { type: 'SHIFT_PROMPT_QUEUE' } 
+  | { type: 'ADD_TIME'; payload: number };
 
 const GameStateContext = createContext<{
   state: GameState;

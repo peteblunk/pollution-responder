@@ -48,6 +48,8 @@ export interface GameState {
   briefingAcknowledged: boolean;
   checklistComplete: boolean;
   whiteboardState: string;
+  timeElapsed: number; // To track time penalties
+  promptQueue: string[]; // A queue of item IDs to resolve
 }
 
 const today = new Date();
@@ -94,4 +96,6 @@ export const initialState: GameState = {
   briefingAcknowledged: false,
   checklistComplete: false,
   whiteboardState: "",
+  timeElapsed: 0,
+  promptQueue: [],
 };
