@@ -1,5 +1,5 @@
 "use client";
-
+import { PlayerStatusCard } from "@/components/player-status-card";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -56,6 +56,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               </span>
             </div>
           </SidebarHeader>
+          <div className="p-2">
+            <PlayerStatusCard />
+          </div>
           <SidebarMenu>
             {navItems.map((item) => (
               <SidebarMenuItem key={item.href}>

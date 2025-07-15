@@ -15,6 +15,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { ScrollArea } from './ui/scroll-area';
 import { useGameState } from '@/hooks/use-game-state';
 import { ClipboardCheck } from 'lucide-react';
+import { phase0 } from '@/scenario/phase0'; // Import the scenario data
 
 const colors = [
   "#000000", // Black
@@ -23,23 +24,6 @@ const colors = [
   "#FFEB3B", // Yellow
   "#4CAF50", // Green
 ];
-
-const requiredItems = [
-    { id: 'ppe', label: 'PPE (hard hat, gloves, eye pro, safety boots, PFD)' },
-    { id: 'equipment', label: 'Equipment (4-gas meter, rad pager)' },
-    { id: 'clothing', label: 'Warm clothing / Foul weather gear' },
-    { id: 'sample-kit', label: 'Sample Kit (checked)' },
-    { id: 'paperwork', label: 'Paperwork (NOFI, forms, notebook, etc.)' },
-    { id: 'other', label: 'Snack, water, ferry pass' },
-    { id: 'calls', label: 'Call Duty Sup / Contact' },
-    { id: 'jurisdiction', label: 'Confirm Jurisdiction / Consult ACP' },
-]
-
-const bonusItems = [
-    { id: 'sunscreen', label: 'Sun Screen' },
-    { id: 'camera', label: 'Camera' },
-    { id: 'misle', label: 'Look up MISLE History' },
-]
 
 type AssessmentStep = 'honor' | 'checklist';
 
@@ -60,7 +44,7 @@ export function PreDepartureChecklist() {
   
   const [rememberedItems, setRememberedItems] = useState<string[]>([]);
   const [assessmentStep, setAssessmentStep] = useState<AssessmentStep>('honor');
-  const { updateMissedChecklistItems, completeChecklist } = useGameState();
+  const {updateMissedChecklistItems, completeChecklist, dispatch } = useGameState();
   const [canvasHeight, setCanvasHeight] = useState(400);
 
   const wrapText = useCallback((context: CanvasRenderingContext2D, text: string, x: number, y: number, maxWidth: number, lineHeight: number, shouldDraw: boolean) => {
@@ -280,16 +264,40 @@ export function PreDepartureChecklist() {
   }
   
   const handleFinalizeChecklist = () => {
-    const missedRequired = requiredItems.filter(item => !rememberedItems.includes(item.id));
-    const allMissed = missedRequired.map(i => i.id);
-    updateMissedChecklistItems(allMissed);
+    const missedRequired: string[] = [];
+    let bonusPoints = 0; // Initialize bonus points
+  
+    // Loop through the master list from our scenario file
+    phase0.checklist.forEach(category => {
+      category.items.forEach(item => {
+        // This logic checks for missed required items
+        if (item.isRequired && !rememberedItems.includes(item.id)) {
+          missedRequired.push(item.id);
+        }
+        
+        // ✨ NEW LOGIC: This checks for remembered bonus items
+        if (item.isBonus && rememberedItems.includes(item.id)) {
+          bonusPoints++;
+        }
+      });
+    });
+  
+    // 👇 NEW LOGIC: Dispatch all updates to the game state at the end
+    dispatch({ type: 'SET_BONUS_POINTS', payload: bonusPoints });
+    dispatch({ type: 'UPDATE_MISSED_CHECKLIST_ITEMS', payload: missedRequired });
+    dispatch({ type: 'SET_PROMPT_QUEUE', payload: missedRequired });
     completeChecklist();
-  }
+  };
 
   const minutes = Math.floor(timeLeft / 60);
   const seconds = timeLeft % 60;
-  const missedCount = requiredItems.length - rememberedItems.filter(id => requiredItems.some(req => req.id === id)).length;
+// First, get a simple list of all IDs that are marked as required in our scenario file.
+    const allRequiredIds = phase0.checklist.flatMap(category =>
+        category.items.filter(item => item.isRequired).map(item => item.id)
+    );
 
+// Then, count how many of those required IDs are NOT in the list of items the user remembered.
+const missedCount = allRequiredIds.filter(id => !rememberedItems.includes(id)).length;
   return (
     <Card className="h-full w-full flex flex-col">
         <CardHeader>
@@ -396,32 +404,30 @@ export function PreDepartureChecklist() {
                                    </CardHeader>
                                    <CardContent className="flex-grow overflow-hidden">
                                        <ScrollArea className="h-full pr-4">
-                                            <div className="space-y-4">
-                                                <div className='p-2 rounded-md bg-muted/50 text-center mb-4'>
-                                                    <p className='text-muted-foreground'>
-                                                        <strong className='font-bold text-uscg-red'>Honor</strong>, Respect, Devotion to Duty
-                                                    </p>
-                                                </div>
-                                                <h4 className="font-bold mb-2">Required Items & Actions</h4>
-                                                <div className="space-y-2">
-                                                {requiredItems.map(item => (
-                                                    <div key={item.id} className="flex items-center space-x-2">
-                                                        <Checkbox id={item.id} onCheckedChange={(checked) => onRememberedItemChange(item.id, !!checked)} />
-                                                        <Label htmlFor={item.id} className="font-normal text-sm">{item.label}</Label>
-                                                    </div>
-                                                ))}
-                                                </div>
-                                                <Separator />
-                                                <h4 className="font-bold mb-2">Bonus Items & Actions</h4>
-                                                <div className="space-y-2">
-                                                {bonusItems.map(item => (
-                                                    <div key={item.id} className="flex items-center space-x-2">
-                                                        <Checkbox id={item.id} onCheckedChange={(checked) => onRememberedItemChange(item.id, !!checked)} />
-                                                        <Label htmlFor={item.id} className="font-normal text-sm">{item.label}</Label>
-                                                    </div>
-                                                ))}
-                                                </div>
-                                            </div>
+                                       <div className="space-y-4">
+    {/* Map over the CATEGORIES from phase0.ts */}
+    {phase0.checklist.map((category) => (
+        <div key={category.category}>
+            <h4 className="font-bold mb-2">{category.category}</h4>
+            <div className="space-y-2 pl-4">
+                {/* Map over the ITEMS within each category */}
+                {category.items.map((item) => (
+                    <div key={item.id} className="flex items-center space-x-2">
+                        <Checkbox
+                            id={item.id}
+                            onCheckedChange={(checked) => onRememberedItemChange(item.id, !!checked)}
+                        />
+                        <Label htmlFor={item.id} className="font-normal text-sm">
+                            {item.label}
+                            {/* Add a red star for required items */}
+                            {item.isRequired && <span className="text-destructive font-bold ml-1">*</span>}
+                        </Label>
+                    </div>
+                ))}
+            </div>
+        </div>
+    ))}
+</div>
                                        </ScrollArea>
                                    </CardContent>
                                    <CardFooter className='pt-4 border-t'>

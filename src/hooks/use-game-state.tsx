@@ -18,7 +18,8 @@ type GameStateAction =
   | { type: 'COMPLETE_CHECKLIST' }
   | { type: 'SET_PROMPT_QUEUE'; payload: string[] }
   | { type: 'SHIFT_PROMPT_QUEUE' } 
-  | { type: 'ADD_TIME'; payload: number };
+  | { type: 'ADD_TIME'; payload: number }
+  | { type: 'SET_BONUS_POINTS'; payload: number};
 
 const GameStateContext = createContext<{
   state: GameState;
@@ -57,6 +58,20 @@ const gameStateReducer = (state: GameState, action: GameStateAction): GameState 
         return { ...state, briefingAcknowledged: true };
     case 'COMPLETE_CHECKLIST':
         return { ...state, checklistComplete: true };
+    case 'SET_BONUS_POINTS':
+        return {...state, bonusPoints:action.payload };
+        case 'SET_PROMPT_QUEUE':
+      return { ...state, promptQueue: action.payload };
+
+    case 'SHIFT_PROMPT_QUEUE':
+      return { ...state, promptQueue: state.promptQueue.slice(1) };
+
+    case 'ADD_TIME':
+      return { ...state, timeElapsed: state.timeElapsed + action.payload };
+    
+    case 'SET_BONUS_POINTS':
+        return { ...state, bonusPoints: action.payload };
+
     default:
       return state;
   }

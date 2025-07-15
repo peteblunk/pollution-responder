@@ -21,7 +21,7 @@ export interface CharacterCreationState {
     lettersOfCommendation: number;
     achievementMedals: number;
     isRepoY: boolean;
-    hasChallengeCoin: boolean;
+    hasChallengeCoin: boolean; 
 }
 
 export interface ICS201 {
@@ -50,6 +50,7 @@ export interface GameState {
   whiteboardState: string;
   timeElapsed: number; // To track time penalties
   promptQueue: string[]; // A queue of item IDs to resolve
+  bonusPoints: number;
 }
 
 const today = new Date();
@@ -98,4 +99,5 @@ export const initialState: GameState = {
   whiteboardState: "",
   timeElapsed: 0,
   promptQueue: [],
+  bonusPoints: 0,
 };

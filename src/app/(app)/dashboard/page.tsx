@@ -1,5 +1,12 @@
 "use client";
-
+interface RollResultState {
+  success: boolean;
+  message: string;
+  roll: number;
+  statValue: number;
+  total: number;
+  target: number;
+}
 import { phase0 } from '@/scenario/phase0'; 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,13 +22,21 @@ import { PreDepartureChecklist } from "@/components/pre-departure-checklist";
 // ✅ Single, correct function definition
 export default function DashboardPage() {
   // ✅ All hooks and variables are declared once at the top of the component
-  const { state, eventLog, logEvent, acknowledgeBriefing } = useGameState();
+  const { state, dispatch, eventLog, logEvent, acknowledgeBriefing } = useGameState();
   const [showBriefing, setShowBriefing] = useState(false);
-  
-  const requiredItemsIds = ['ppe', 'equipment', 'clothing', 'sample-kit', 'paperwork', 'other', 'calls', 'jurisdiction'];
-  const missedRequiredItemsCount = (state?.missedChecklistItems || []).filter(id => requiredItemsIds.includes(id)).length;
-  const preparednessPenalty = missedRequiredItemsCount;
-  const finalPreparedness = state.character.preparedness - preparednessPenalty;
+  const [rollResult, setRollResult] = useState<RollResultState | null>(null);
+  // ...
+
+// 1. Safely get values from the game state, providing default fallbacks.
+const missedItems = state.missedChecklistItems || [];
+const bonusPoints = state.bonusPoints ?? 0;
+// Uses optional chaining `?.` AND a fallback, making it very safe.
+const characterPreparedness = state.character?.preparedness ?? 0; 
+
+// 2. Now, perform calculations using only our safe variables.
+const preparednessPenalty = missedItems.length;
+const finalAdjustment = bonusPoints - preparednessPenalty;
+const finalPreparedness = characterPreparedness - preparednessPenalty;
 
   useEffect(() => {
     if (state.characterLocked && !state.briefingAcknowledged && !showBriefing) {
@@ -69,9 +84,12 @@ export default function DashboardPage() {
   
   // Main layout when character is locked
   return (
-    <div className="grid gap-6 lg:grid-cols-3">
-      <div className="lg:col-span-2 space-y-6">
+    <div className="grid gap-6 lg:grid-cols-2">
+      {/* This is the main content column */}
+      <div className="col-span-2 space-y-6">
+        {/* First, check if the initial briefing has been acknowledged */}
         {!state.briefingAcknowledged ? (
+          // If not, show the standby/initial report screens
           !showBriefing ? (
             <div className="flex flex-col items-center justify-center h-full text-center">
               <Card className="max-w-md">
@@ -106,23 +124,108 @@ export default function DashboardPage() {
             </Card>
           )
         ) : (
+          // If briefing IS acknowledged, then we start the checklist/prompt/actions logic
           <>
             {!state.checklistComplete ? (
+              // 1. If checklist is not complete, show it.
               <PreDepartureChecklist />
+            ) : state.promptQueue.length > 0 ? (
+              // 2. ELSE IF there are prompts, show the active prompt.
+              (() => {
+                const activePromptId = state.promptQueue[0];
+                const prompt = phase0.itemPrompts[activePromptId];
+                if (!prompt) return <p>Error: Unknown prompt ID '{activePromptId}'</p>;
+
+                return (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>{prompt.title}</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="mb-4">{prompt.text}</p>
+                          {rollResult ? (
+                            // If there's a result, show it and a "Continue" button
+                            <div>
+                          <Alert variant={rollResult.success ? 'default' : 'destructive'}>
+                            <AlertTitle className="font-bold text-lg">
+                              {rollResult.success ? "Success!" : "Failure"}
+                            </AlertTitle>
+                            <AlertDescription className="space-y-2">
+                              {/* This is the calculation breakdown */}
+                              <div className="p-2 bg-muted/50 rounded-md text-center font-mono text-lg">
+                                <span>{rollResult.roll}</span>
+                                <span className="text-muted-foreground mx-1">(Roll)</span>
+                                <span>+</span>
+                                <span className="mx-1">{rollResult.statValue}</span>
+                                <span className="text-muted-foreground">(Prep)</span>
+                                <span>=</span>
+                                <span className="font-bold text-xl ml-2">{rollResult.total}</span>
+                              </div>
+                              <p>Your total of <strong>{rollResult.total}</strong> was {rollResult.success ? 'greater than or equal to' : 'less than'} the target of <strong>{rollResult.target}</strong>.</p>
+                              {/* This is the story outcome message */}
+                              <p className="pt-2 border-t">{rollResult.message}</p>
+                            </AlertDescription>
+                          </Alert>
+                              <Button
+                                className="mt-4 w-full"
+                                onClick={() => {
+                                  setRollResult(null); // Clear the result
+                                  dispatch({ type: 'SHIFT_PROMPT_QUEUE' }); // NOW move to the next prompt
+                                }}
+                              >
+                                Continue
+                              </Button>
+                            </div>
+                          ) : (
+                            <DiceRoller
+                              key={activePromptId}
+                              sides={12}
+                            onRoll={(roll) => {
+                              const targetNumber = 10; // The Difficulty Class (DC) to beat
+                              const statValue = state.character?.preparedness ?? 0;
+                              const total = roll + statValue;
+                              const success = total >= targetNumber;
+                              const outcome = success ? prompt.outcomes.success : prompt.outcomes.failure;
+
+                              // Log the simple message to the event log as before
+                              logEvent(outcome.logMessage);
+
+                              if (outcome.timeCost > 0) {
+                                dispatch({ type: 'ADD_TIME', payload: outcome.timeCost });
+                              }
+
+                              // Save the FULL breakdown of the roll into our state
+                              setRollResult({
+                                success,
+                                message: outcome.logMessage,
+                                roll,
+                                statValue,
+                                total,
+                                target: targetNumber,
+                              });
+                            }}
+                            >
+                              {prompt.buttonText} (vs. Preparedness)
+                            </DiceRoller>
+                          )}
+                        </CardContent>
+                      </Card>
+                    );
+                  })()
+
             ) : (
+              // 3. ONLY IF all prompts are done, show the final actions.
               <>
                 <Card>
                   <CardHeader>
                     <CardTitle className="font-headline text-2xl flex items-center gap-2"><BellRing className="text-destructive"/> Phase 0: Office Briefing & Departure Prep</CardTitle>
-                    <CardDescription>
-                      {phase0.initialReport.description}
-                    </CardDescription>
+                    <CardDescription>{phase0.initialReport.description}</CardDescription>
                   </CardHeader>
                   <CardContent>
                     <Alert>
                       <CheckSquare className="h-4 w-4"/>
-                      <AlertTitle>Checklist Complete</AlertTitle>
-                      <AlertDescription>You&apos;ve finalized your preparations. Time to see if you&apos;re ready for the road.</AlertDescription>
+                      <AlertTitle>All Preparations Complete</AlertTitle>
+                      <AlertDescription>You've resolved all outstanding items. Time for final actions.</AlertDescription>
                     </Alert>
                   </CardContent>
                 </Card>
@@ -130,108 +233,35 @@ export default function DashboardPage() {
                   <CardHeader>
                     <CardTitle className="font-headline">Pre-Departure Actions & Rolls</CardTitle>
                   </CardHeader>
-                      <CardContent className="space-y-4">
-                        {/* We map over the actions from our scenario file */}
-                        {phase0.postChecklistActions.map((action) => (
-                          <div key={action.id} className="flex flex-wrap items-center justify-between gap-4 p-3 border rounded-lg">
-                            <div>
-                              <h4 className="font-medium flex items-center gap-2">{action.title}</h4>
-                              <p className="text-sm text-muted-foreground">{action.description}</p>
-                            </div>
-
-                            {/* Conditionally render a Button or a DiceRoller based on the action type */}
-                            {action.type === 'BUTTON' && (
-                              <Button onClick={() => logEvent(action.logMessage)}>
-                                {action.buttonText}
-                              </Button>
-                            )}
-
-                            {action.type === 'DICE_ROLL' && (
-                              <DiceRoller
-                                sides={action.sides}
-                                onRoll={(roll) => logEvent(action.logMessage.replace('{roll}', roll.toString()))}
-                              >
-                                {action.buttonText}
-                              </DiceRoller>
-                            )}
-                          </div>
-                        ))}
-                      </CardContent>
+                  <CardContent className="space-y-4">
+                    {phase0.postChecklistActions.map((action) => (
+                      <div key={action.id} className="flex flex-wrap items-center justify-between gap-4 p-3 border rounded-lg">
+                        <div>
+                          <h4 className="font-medium">{action.title}</h4>
+                          <p className="text-sm text-muted-foreground">{action.description}</p>
+                        </div>
+                        {action.type === 'BUTTON' && ( <Button onClick={() => logEvent(action.logMessage)}>{action.buttonText}</Button> )}
+                        {action.type === 'DICE_ROLL' && ( <DiceRoller sides={action.sides} onRoll={(roll) => logEvent(action.logMessage.replace('{roll}', roll.toString()))}>{action.buttonText}</DiceRoller> )}
+                      </div>
+                    ))}
+                  </CardContent>
                 </Card>
               </>
             )}
+            {/* This is the Event Log, it shows up after the briefing is acknowledged */}
             <Card>
-              <CardHeader>
-                <CardTitle className="font-headline">Event Log</CardTitle>
-                <CardDescription>A log of your decisions and their outcomes.</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4 max-h-48 overflow-y-auto pr-2">
-                  {eventLog.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">No events yet. Make your first move!</p>
-                  ) : (
-                    [...eventLog].reverse().map((log, index) => (
-                      <div key={index} className="text-sm">{log}</div>
-                    ))
-                  )}
-                </div>
-              </CardContent>
+                <CardHeader>
+                    <CardTitle className="font-headline">Event Log</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    {/* ... event log content ... */}
+                </CardContent>
             </Card>
           </>
         )}
       </div>
 
-      <div className="lg:col-span-1 space-y-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="font-headline flex items-center gap-2"><User /> Your Character</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <label className="text-sm font-medium">Skill: {state.character.skill}</label>
-              <Progress value={state.character.skill * 10} max={100} className="h-2"/>
-            </div>
-            <div>
-              <div className="flex justify-between items-center">
-                <label className="text-sm font-medium">Preparedness: {finalPreparedness}</label>
-                {preparednessPenalty > 0 && (
-                  <span className="text-sm font-bold text-destructive">(-{preparednessPenalty})</span>
-                )}
-              </div>
-              <Progress value={finalPreparedness * 10} max={100} className="h-2"/>
-            </div>
-            <div>
-              <label className="text-sm font-medium">Luck: {state.character.luck}</label>
-              <Progress value={state.character.luck * 10} max={100} className="h-2"/>
-            </div>
-            {state.checklistComplete && preparednessPenalty > 0 && (
-              <Alert variant="destructive" className="border-destructive/50 text-destructive">
-                <ShieldAlert className="h-4 w-4" />
-                <AlertTitle>Preparedness Penalty!</AlertTitle>
-                <AlertDescription className="text-destructive/90">
-                  You missed {missedRequiredItemsCount} required item(s) on your checklist, resulting in a -{preparednessPenalty} penalty to your Preparedness for this phase.
-                </AlertDescription>
-              </Alert>
-            )}
-            <Button asChild variant="outline" className="w-full">
-              <Link href="/character">View Full Sheet</Link>
-            </Button>
-          </CardContent>
-        </Card>
-        <Card className="bg-uscg-blue text-white">
-          <CardHeader>
-            <CardTitle className="font-headline flex items-center gap-2 border-b border-white/20 pb-2"><LifeBuoy /> Mission Objectives</CardTitle>
-          </CardHeader>
-          <CardContent className="text-blue-50">
-            <ul className="space-y-2 list-disc list-inside">
-              <li>Contain the spill.</li>
-              <li>Protect the marshland.</li>
-              <li>Document the incident (ICS-201).</li>
-              <li>Identify the responsible party.</li>
-            </ul>
-          </CardContent>
-        </Card>
-      </div>
+      
     </div>
   );
 }
